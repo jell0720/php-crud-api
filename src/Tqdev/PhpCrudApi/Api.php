@@ -36,7 +36,6 @@ use Tqdev\PhpCrudApi\OpenApi\OpenApiService;
 use Tqdev\PhpCrudApi\Record\ErrorCode;
 use Tqdev\PhpCrudApi\Record\RecordService;
 use Tqdev\PhpCrudApi\ResponseUtils;
-use Tqdev\PhpCrudApi\Middleware\ConnectCommandMiddleware;
 
 class Api implements RequestHandlerInterface
 {
@@ -53,8 +52,7 @@ class Api implements RequestHandlerInterface
             $config->getDatabase(),
             $config->getUsername(),
             $config->getPassword(),
-            $config->getDSN(),
-            $config->getOdbcSubdriver()
+            $config->getDSN()
         );
         $prefix = sprintf('phpcrudapi-%s-', substr(md5(__FILE__), 0, 8));
         $cache = CacheFactory::create($config->getCacheType(), $prefix, $config->getCachePath());
@@ -107,9 +105,6 @@ class Api implements RequestHandlerInterface
                     break;
                 case 'customization':
                     new CustomizationMiddleware($router, $responder, $properties, $reflection);
-                    break;
-                case 'connectcommands':
-                    new Middleware\ConnectCommandMiddleware($router, $responder, $properties, $reflection,$db);
                     break;
             }
         }

@@ -10,19 +10,17 @@ class GenericDefinition
 {
     private $pdo;
     private $driver;
-    private $subdriver;
     private $database;
     private $typeConverter;
     private $reflection;
 
-    public function __construct(LazyPdo $pdo, string $driver, string $database, $subdriver)
+    public function __construct(LazyPdo $pdo, string $driver, string $database)
     {
         $this->pdo = $pdo;
         $this->driver = $driver;
-        $this->subdriver = $subdriver;
         $this->database = $database;
-        $this->typeConverter = new TypeConverter($driver, $subdriver);
-        $this->reflection = new GenericReflection($pdo, $driver, $database, $subdriver);
+        $this->typeConverter = new TypeConverter($driver);
+        $this->reflection = new GenericReflection($pdo, $driver, $database);
     }
 
     private function quote(string $identifier): string
@@ -422,5 +420,10 @@ class GenericDefinition
         $stmt = $this->pdo->prepare($sql);
         //echo "- $sql -- []\n";
         return $stmt->execute();
+    }
+
+    public function setTypeConverterArrays(string $driver, array $from, array $to ): void
+    {
+        $this->typeConverter->setTypeConverterArrays($driver, $from, $to);
     }
 }

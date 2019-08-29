@@ -1,3 +1,5 @@
+This is a fork of mevdschee/php-crud-ap package. Please consider using that. 
+
 # PHP-CRUD-API
 
 Single file PHP 7 script that adds a REST API to a MySQL 5.6 InnoDB database. PostgreSQL 9.1 and MS SQL Server 2012 are fully supported. 
@@ -77,13 +79,14 @@ These are all the configuration options and their default value between brackets
 - "cacheTime": Number of seconds the cache is valid (`10`)
 - "debug": Show errors in the "X-Debug-Info" header (`false`)
 - "basePath": URI base path of the API (determined using PATH_INFO by default)
-- "dsn": MSSQL ODBC connection string (``)
+- "dsn": MSSQL ODBC connection string (``)  * - fork specific
 
 ### ODBC DSN handling
 
-Provide MsSQL ODBC connection string for PDO access. Driver name needs to match system ODBC settings.
+Provide connection string for PDO access. Some drivers needs to match system ODBC settings.
 (Please refer to you system setups - eg: /etc/odbcinst.ini )
 
+Example for MSSQL ODBC DSN:
     $config = new Config([
 	...
 	'dsn'	   =>  'odbc:DRIVER=ODBC Driver 17 for SQL Server;Server=localhost,1433;Database=<mydatabasename>;charset=UTF-8;MARS_Connection=yes',
@@ -603,7 +606,6 @@ You can enable the following middleware using the "middlewares" config parameter
 - "pageLimits": Restricts list operations to prevent database scraping
 - "joinLimits": Restricts join parameters to prevent database scraping
 - "customization": Provides handlers for request and response customization
-- "connectcommands": Apply additional SQL command after database connect 
 
 The "middlewares" config parameter is a comma separated list of enabled middlewares.
 You can tune the middleware behavior using middleware specific configuration parameters:
@@ -644,6 +646,14 @@ You can tune the middleware behavior using middleware specific configuration par
 - "reconnect.databaseHandler": Handler to implement retrieval of the database name ("")
 - "reconnect.usernameHandler": Handler to implement retrieval of the database username ("")
 - "reconnect.passwordHandler": Handler to implement retrieval of the database password ("")
++ "reconnect.commands": Handler to implement specific DB connection initialiazation commands ("") *- fork specific
++ "reconnect.dsnHandler": Handler to implement retrievel of the database connection string ("") * - fork specific
++ "reconnect.getTablesSQLOverride": Handler to override or add driver specific SQL command ("") * - fork specific
++ "reconnect.getTableColumnsSQLOverride": Handler to override or add driver specific SQL command ("") * - fork specific
++ "reconnect.getTablePrimaryKeysSQLOverride":Handler to override or add driver specific SQL command ("") * - fork specific
++ "reconnect.getTableForeignKeysSQLOverride":Handler to override or add driver specific SQL command ("") * - fork specific 
++ "reconnect.fromTypeArray": Handler to add driver specific SQL type conversion specification ("") * - fork specific
++ "reconnect.toTypeArray": Handler to add driver specific SQL type conversion specification ("") * - fork specific
 - "authorization.tableHandler": Handler to implement table authorization rules ("")
 - "authorization.columnHandler": Handler to implement column authorization rules ("")
 - "authorization.recordHandler": Handler to implement record authorization filter rules ("")
@@ -659,7 +669,6 @@ You can tune the middleware behavior using middleware specific configuration par
 - "joinLimits.records": The maximum number of records returned for a joined entity ("1000")
 - "customization.beforeHandler": Handler to implement request customization ("")
 - "customization.afterHandler": Handler to implement response customization ("")
-- "connectcommands.handler": Handler to implement initalization commands on database connect ([])
 
 If you don't specify these parameters in the configuration, then the default values (between brackets) are used.
 
@@ -964,17 +973,56 @@ You may use the "customization" middleware to modify request and response and im
 The above example will add a header "X-Time-Taken" with the number of seconds the API call has taken.
 
 
-### ConnectCommands handlers
+### Support for other DB drivers (eg: ODBC) * - fork specific
 
-Array of SQL commands to setup DB parameters after database connection. 
-Eg.: MSSQL context variables can ben initialised by the following parameters:
+The support of other DB drivers can be achieved through fork-modified ReconnectMiddleware. 
+The config sequence of ODBC MSSQL should look like the following
 
-    'connectcommands.handler' => function() {
-            $myuserfilter = 'admin';	// Should be replaced by a function specifying rls id
-            return [
-                "exec sp_set_session_context @key=N'myuser', @value='$myuserfilter'"
-            ];
-        }
+    'username'                => '<my_username>',
+    'password'                => '<my_password>',
+    'database'                => '',  				// Not required - provided through reconnect.dsnHandler
+    'driver'                  => '',  				// Not required - provided through reconnect.driverHandler
+    'middlewares'             => 'reconnect',			// Mandatory 
+    'reconnect.commands' => function() {
+        $userid = 123456;					// Magic function to initialize RLS 
+        return [
+            "exec sp_set_session_context @key=N'tenant_userid', @value=$userid"
+        ];
+    },
+    'reconnect.driverHandler' => function() { return 'odbc'; }, // Set driver name
+    'reconnect.dsnHandler' => function() {			// Set connection string - May varry
+        return 'odbc:DRIVER=ODBC Driver 17 for SQLServer;Server=localhost,1433;Database=<my_databasename>;charset=UTF-8;MARS_Connection=yes';
+    },
+    'reconnect.getTablesSQLOverride'            => 'SELECT o.name as "TABLE_NAME", o.xtype as "TABLE_TYPE" FROM sysobjects o WHERE o.xtype IN (\'U\', \'V\') ORDER BY "TABLE_NAME"',
+    'reconnect.getTableColumnsSQLOverride'      => 'SELECT c.name AS "COLUMN_NAME", c.is_nullable AS "IS_NULLABLE", t.Name AS "DATA_TYPE", (c.max_length/2) AS "CHARACTER_MAXIMUM_LENGTH", c.precision AS "NUMERIC_PRECISION", c.scale AS "NUMERIC_SCALE", \'\' AS "COLUMN_TYPE" FROM sys.columns c INNER JOIN sys.types t ON c.user_type_id = t.user_type_id WHERE c.object_id = OBJECT_ID(?)',
+    'reconnect.getTablePrimaryKeysSQLOverride'  => 'SELECT c.NAME as "COLUMN_NAME" FROM sys.key_constraints kc inner join sys.objects t on t.object_id = kc.parent_object_id INNER JOIN sys.index_columns ic ON kc.parent_object_id = ic.object_id and kc.unique_index_id = ic.index_id INNER JOIN sys.columns c ON ic.object_id = c.object_id AND ic.column_id = c.column_id WHERE kc.type = \'PK\' and t.object_id = OBJECT_ID(?)',
+    'reconnect.getTableForeignKeysSQLOverride'  => 'SELECT COL_NAME(fc.parent_object_id, fc.parent_column_id) AS "COLUMN_NAME", OBJECT_NAME (f.referenced_object_id) AS "REFERENCED_TABLE_NAME" FROM sys.foreign_keys AS f INNER JOIN sys.foreign_key_columns AS fc ON f.OBJECT_ID = fc.constraint_object_id WHERE f.parent_object_id = OBJECT_ID(?)',
+    'reconnect.fromTypeArray'   => [				// Required type conversions / From side
+            'boolean' => 'bit',
+            'varchar' => 'nvarchar',
+            'clob' => 'ntext',
+            'blob' => 'image'
+    ],
+    'reconnect.toTypeArray'     => [				// Required type conversions / To side
+            'varbinary(0)' => 'blob',
+            'bit' => 'boolean',
+            'datetime' => 'timestamp',
+            'datetime2' => 'timestamp',
+            'float' => 'double',
+            'image' => 'blob',
+            'int' => 'integer',
+            'money' => 'decimal',
+            'ntext' => 'clob',
+            'smalldatetime' => 'timestamp',
+            'smallmoney' => 'decimal',
+            'text' => 'clob',
+            'timestamp' => 'binary',
+            'udt' => 'varbinary',
+            'uniqueidentifier' => 'char',
+            'xml' => 'clob'
+    ],
+    ...
+
 
 
 ### File uploads

@@ -19,8 +19,7 @@ class Config
         'debug' => false,
         'basePath' => '',
         'openApiBase' => '{"info":{"title":"PHP-CRUD-API","version":"1.0.0"}}',
-        'dsn' => '',
-        'subdriver' => 'mssql'
+        'dsn' => ''
     ];
 
     private function getDefaultDriver(array $values): string
@@ -33,21 +32,21 @@ class Config
 
     private function getDefaultPort(string $driver): int
     {
-        switch (($driver==='odbc') ? $this->getOdbcSubdriver() : $driver) {
+        switch ($driver) {
             case 'mysql':return 3306;
             case 'pgsql':return 5432;
             case 'sqlsrv':return 1433;
-            case 'mssql':return 1433;
+            default: return -1;
         }
     }
 
     private function getDefaultAddress(string $driver): string
     {
-        switch (($driver==='odbc') ? $this->getOdbcSubdriver() : $driver) {
+        switch ($driver) {
             case 'mysql':return 'localhost';
             case 'pgsql':return 'localhost';
             case 'sqlsrv':return 'localhost';
-            case 'mssql':return 'localhost';
+            default: return '';
         }
     }
 
@@ -55,7 +54,6 @@ class Config
     {
         return [
             'driver' => $driver,
-            'subdriver' => ($driver==='odbc' ? 'mssql' : ''),
             'address' => $this->getDefaultAddress($driver),
             'port' => $this->getDefaultPort($driver),
         ];
@@ -172,11 +170,6 @@ class Config
     public function getDSN(): string
     {
         return $this->values['dsn'];
-    }
-
-    public function getOdbcSubdriver(): string
-    {
-        return $this->values['subdriver'];
     }
 
 }

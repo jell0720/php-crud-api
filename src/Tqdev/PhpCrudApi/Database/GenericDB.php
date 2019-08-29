@@ -10,7 +10,6 @@ use Tqdev\PhpCrudApi\Record\Condition\Condition;
 class GenericDB
 {
     private $driver;
-    private $subdriver;
     private $address;
     private $port;
     private $database;
@@ -23,47 +22,48 @@ class GenericDB
     private $conditions;
     private $columns;
     private $converter;
-    private $connectcommands = [];
+    private $commandsOverride;
 
     private function getDsn(): string
     {
         if ($this->dsn) {
             return $this->dsn;
         }
-
-        switch (($this->driver==='odbc') ? $this->subdriver : $this->driver) {
+        switch ($this->driver) {
             case 'mysql':
                 return "$this->driver:host=$this->address;port=$this->port;dbname=$this->database;charset=utf8mb4";
             case 'pgsql':
                 return "$this->driver:host=$this->address port=$this->port dbname=$this->database options='--client_encoding=UTF8'";
             case 'sqlsrv':
                 return "$this->driver:Server=$this->address,$this->port;Database=$this->database";
-            case 'mssql':
-                return "DRIVER=ODBC Driver 17 for SQL Server:Server=$this->address,$this->port;Database=$this->database";
+            default:
+                return '';
         }
     }
 
     private function getCommands(): array
     {
-        $retcommands = $this->connectcommands;
-        switch (($this->driver==='odbc') ? $this->subdriver : $this->driver) {
+        if ($retval = $this->checkGetCommandsOverride()) {
+            return $retval;
+        }
+
+        switch ($this->driver) {
             case 'mysql':
-                $retcommands = array_merge($retcommands, [
+                return [
                     'SET SESSION sql_warnings=1;',
                     'SET NAMES utf8mb4;',
                     'SET SESSION sql_mode = "ANSI,TRADITIONAL";',
-                ]);
+                ];
             case 'pgsql':
-                $retcommands = array_merge($retcommands, [
+                return [
                     "SET NAMES 'UTF8';",
-                ]);
+                ];
             case 'sqlsrv':
-            case 'mssql':
+                return [];
             default:
-                break;
+                return [];
         }
 
-        return $retcommands;
     }
 
     private function getOptions(): array
@@ -72,7 +72,7 @@ class GenericDB
             \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
             \PDO::ATTR_DEFAULT_FETCH_MODE => \PDO::FETCH_ASSOC,
         );
-        switch (($this->driver==='odbc') ? $this->subdriver : $this->driver) {
+        switch ($this->driver) {
             case 'mysql':
                 return $options + [
                     \PDO::ATTR_EMULATE_PREPARES => false,
@@ -89,32 +89,32 @@ class GenericDB
                     \PDO::SQLSRV_ATTR_DIRECT_QUERY => false,
                     \PDO::SQLSRV_ATTR_FETCHES_NUMERIC_TYPE => true,
                 ];
-            case 'mssql':
-                return $options;
+            default:
+                return [];
         }
     }
 
     private function initPdo(): bool
     {
         if ($this->pdo) {
-            $result = $this->pdo->reconstruct($this->getDsn(), $this->username, $this->password, $this->getOptions(), $this->dsn, $this->subdriver);
+            $result = $this->pdo->reconstruct($this->getDsn(), $this->username, $this->password, $this->getOptions());
         } else {
-            $this->pdo = new LazyPdo($this->getDsn(), $this->username, $this->password, $this->getOptions(), $this->dsn);
+            $this->pdo = new LazyPdo($this->getDsn(), $this->username, $this->password, $this->getOptions());
             $result = true;
         }
         $commands = $this->getCommands();
         foreach ($commands as $command) {
-            $this->pdo->addConnectCommand($command);
+            $this->pdo->addInitCommand($command);
         }
-        $this->reflection = new GenericReflection($this->pdo, $this->driver, $this->database, $this->subdriver);
-        $this->definition = new GenericDefinition($this->pdo, $this->driver, $this->database, $this->subdriver);
+        $this->reflection = new GenericReflection($this->pdo, $this->driver, $this->database);
+        $this->definition = new GenericDefinition($this->pdo, $this->driver, $this->database);
         $this->conditions = new ConditionsBuilder($this->driver);
         $this->columns = new ColumnsBuilder($this->driver);
         $this->converter = new DataConverter($this->driver);
         return $result;
     }
 
-    public function __construct(string $driver, string $address, int $port, string $database, string $username, string $password, string $dsn, string $subdriver)
+    public function __construct(string $driver, string $address, int $port, string $database, string $username, string $password, string $dsn)
     {
         $this->driver = $driver;
         $this->address = $address;
@@ -123,11 +123,11 @@ class GenericDB
         $this->username = $username;
         $this->password = $password;
         $this->dsn = $dsn;
-        $this->subdriver = ($driver==='odbc') ? $subdriver : '';
+        
         $this->initPdo();
     }
 
-    public function reconstruct(string $driver, string $address, int $port, string $database, string $username, string $password, string $dsn, string $subdriver): bool
+    public function reconstruct(string $driver, string $address, int $port, string $database, string $username, string $password, string $dsn): bool
     {
         if ($driver) {
             $this->driver = $driver;
@@ -149,9 +149,6 @@ class GenericDB
         }
         if ($dsn) {
             $this->dsn = $dsn;
-        }
-        if ($subdriver) {
-            $this->subdriver = $subdriver;
         }
         return $this->initPdo();
     }
@@ -335,7 +332,6 @@ class GenericDB
     {
         return md5(json_encode([
             $this->driver,
-            $this->subdriver,
             $this->address,
             $this->port,
             $this->database,
@@ -344,10 +340,30 @@ class GenericDB
         ]));
     }
 
-    public function addConnectCommand(string $command): void
+    public function setSQLOverride(string $sqlFunction, $value): void
     {
-        $this->reflection->addConnectCommand($command);
+        $this->reflection->setSQLOverride($sqlFunction, $value);
     }
 
+    public function setGetCommandsOverride($value): void
+    {
+        $this->commandsOverride = $value;
+    }
 
+    public function checkGetCommandsOverride() {
+        if ($this->commandsOverride) {
+            if (is_array($this->commandsOverride)) {
+                return $this->commandsOverride;
+            }
+            if (is_callable($this->commandsOverride)) {
+                return call_user_func($this->commandsOverride);
+            }
+        }
+    }
+
+    public function setTypeConverterArrays(string $driver, array $from, array $to ): void
+    {
+        $this->definition->setTypeConverterArrays($driver, $from, $to);
+        $this->reflection->setTypeConverterArrays($driver, $from, $to);
+    }
 }

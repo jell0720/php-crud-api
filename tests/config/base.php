@@ -5,7 +5,7 @@ $settings = [
     'password' => 'incorrect_password',
     'dsn'      => '',
     'controllers' => 'records,columns,cache,openapi,geojson',
-    'middlewares' => 'cors,reconnect,dbAuth,jwtAuth,basicAuth,authorization,validation,ipAddress,sanitation,multiTenancy,pageLimits,joinLimits,customization,connectcommands',
+    'middlewares' => 'cors,reconnect,dbAuth,jwtAuth,basicAuth,authorization,validation,ipAddress,sanitation,multiTenancy,pageLimits,joinLimits,customization,commandoverride',
     'dbAuth.mode' => 'optional',
     'dbAuth.returnedColumns' => 'id,username,password',
     'jwtAuth.mode' => 'optional',
@@ -55,7 +55,7 @@ $settings = [
             return $response->withHeader('X-Time-Taken', 0.006/*microtime(true)*/ - $environment->start);
         }
     },
-    'connectcommands.handler' => function () {
+    'commandoverride.handler' => function () {
         return [];
     },
     'debug' => false,

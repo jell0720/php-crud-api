@@ -86,16 +86,6 @@ class ReconnectMiddleware extends Middleware
         return '';
     }
 
-    private function getOdbcSubdriver(): string
-    {
-        $odbcSubdriverHandler = $this->getProperty('odbcSubdriverHandler', '');
-        if ($odbcSubdriverHandler) {
-            return call_user_func($odbcSubdriverHandler);
-        }
-        return '';
-    }
-
-
     public function process(ServerRequestInterface $request, RequestHandlerInterface $next): ResponseInterface
     {
         $driver = $this->getDriver();
@@ -105,10 +95,27 @@ class ReconnectMiddleware extends Middleware
         $username = $this->getUsername();
         $password = $this->getPassword();
         $dsn = $this->getDsn();
-        $subdriver = $this->getOdbcSubdriver();
-        if ($driver || $address || $port || $database || $username || $password || $dsn || $subdriver) {
-            $this->db->reconstruct($driver, $address, $port, $database, $username, $password, $dsn, $subdriver);
+
+        if ($commandoverride = $this->getProperty('commands', '')) {
+            $this->db->setGetCommandsOverride($commandoverride);
         }
+
+        if ($driver || $address || $port || $database || $username || $password || $dsn ) {
+            $this->db->reconstruct($driver, $address, $port, $database, $username, $password, $dsn);
+        }
+        
+        foreach(['getTablesSQLOverride', 'getTableColumnsSQLOverride', 'getTablePrimaryKeysSQLOverride', 'getTableForeignKeysSQLOverride'] as $name) {
+            if ($override = $this->getProperty($name, '')) {
+                $this->db->setSQLOverride($name, $override);
+            }
+        }
+
+        $fromTypeArray = $this->getProperty('fromTypeArray', '');
+        $toTypeArray   = $this->getProperty('toTypeArray', '');
+        if ($fromTypeArray && $toTypeArray) {
+            $this->db->setTypeConverterArrays($driver, $fromTypeArray, $toTypeArray);
+        }
+
         return $next->handle($request);
     }
 }

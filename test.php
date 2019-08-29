@@ -122,8 +122,7 @@ function loadFixture(string $dir, Config $config)
         getDatabase($config),
         getUsername($config),
         getPassword($config),
-        getDsn($config),
-        $config->getOdbcSubdriver()        
+        getDsn($config)
     );
     $pdo = $db->pdo();
     $file = preg_replace('/--.*$/m', '', $file);
