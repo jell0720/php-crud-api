@@ -63,7 +63,7 @@ Edit the following lines in the bottom of the file "`api.php`":
 
 These are all the configuration options and their default value between brackets:
 
-- "driver": `mysql`, `pgsql` or `sqlsrv` (`mysql`)
+- "driver": `mysql`, `pgsql`, `sqlsrv` or `odbc` (`mysql`)
 - "address": Hostname of the database server (`localhost`)
 - "port": TCP port of the database server (defaults to driver default)
 - "username": Username of the user connecting to the database (no default)
@@ -77,6 +77,20 @@ These are all the configuration options and their default value between brackets
 - "cacheTime": Number of seconds the cache is valid (`10`)
 - "debug": Show errors in the "X-Debug-Info" header (`false`)
 - "basePath": URI base path of the API (determined using PATH_INFO by default)
+- "dsn": MSSQL ODBC connection string (``)
+
+### ODBC DSN handling
+
+Provide MsSQL ODBC connection string for PDO access. Driver name needs to match system ODBC settings.
+(Please refer to you system setups - eg: /etc/odbcinst.ini )
+
+    $config = new Config([
+	...
+	'dsn'	   =>  'odbc:DRIVER=ODBC Driver 17 for SQL Server;Server=localhost,1433;Database=<mydatabasename>;charset=UTF-8;MARS_Connection=yes',
+	...
+    ]);
+
+NB: In case DSN is provided "address","port", "database" config parameters are ignored.
 
 ## Limitations
 
@@ -589,6 +603,7 @@ You can enable the following middleware using the "middlewares" config parameter
 - "pageLimits": Restricts list operations to prevent database scraping
 - "joinLimits": Restricts join parameters to prevent database scraping
 - "customization": Provides handlers for request and response customization
+- "connectcommands": Apply additional SQL command after database connect 
 
 The "middlewares" config parameter is a comma separated list of enabled middlewares.
 You can tune the middleware behavior using middleware specific configuration parameters:
@@ -644,6 +659,7 @@ You can tune the middleware behavior using middleware specific configuration par
 - "joinLimits.records": The maximum number of records returned for a joined entity ("1000")
 - "customization.beforeHandler": Handler to implement request customization ("")
 - "customization.afterHandler": Handler to implement response customization ("")
+- "connectcommands.handler": Handler to implement initalization commands on database connect ([])
 
 If you don't specify these parameters in the configuration, then the default values (between brackets) are used.
 
@@ -884,6 +900,8 @@ Two forms of multi-tenancy are supported:
  - Single database, where every table has a tenant column (using the "multiTenancy" middleware).
  - Multi database, where every tenant has it's own database (using the "reconnect" middleware).
 
+NB: With middleware ConnectCommand (connectcommands.handler) multitenant Row Level security initialization is possible. Please see below.
+
 Below is an explanation of the corresponding middlewares.
 
 #### Multi-tenancy middleware
@@ -944,6 +962,20 @@ You may use the "customization" middleware to modify request and response and im
     },
 
 The above example will add a header "X-Time-Taken" with the number of seconds the API call has taken.
+
+
+### ConnectCommands handlers
+
+Array of SQL commands to setup DB parameters after database connection. 
+Eg.: MSSQL context variables can ben initialised by the following parameters:
+
+    'connectcommands.handler' => function() {
+            $myuserfilter = 'admin';	// Should be replaced by a function specifying rls id
+            return [
+                "exec sp_set_session_context @key=N'myuser', @value='$myuserfilter'"
+            ];
+        }
+
 
 ### File uploads
 

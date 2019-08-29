@@ -1498,6 +1498,11 @@ namespace Nyholm\Psr7\Factory {
 
         public function createResponse(int $code = 200, string $reasonPhrase = ''): ResponseInterface
         {
+            if (2 > \func_num_args()) {
+                // This will make the Response class to use a custom reasonPhrase
+                $reasonPhrase = null;
+            }
+
             return new Response($code, [], null, '1.1', $reasonPhrase);
         }
 
@@ -1680,7 +1685,7 @@ namespace Nyholm\Psr7 {
             return $new;
         }
 
-        private function setHeaders(array $headers) /*:void*/
+        private function setHeaders(array $headers): void
         {
             foreach ($headers as $header => $value) {
                 $value = $this->validateAndTrimHeader($header, $value);
@@ -1880,7 +1885,7 @@ namespace Nyholm\Psr7 {
             return $new;
         }
 
-        private function updateHostFromUri() /*:void*/
+        private function updateHostFromUri(): void
         {
             if ('' === $host = $this->uri->getHost()) {
                 return;
@@ -1918,7 +1923,7 @@ namespace Nyholm\Psr7 {
         use MessageTrait;
 
         /** @var array Map of standard HTTP status code/reason phrases */
-        /*private*/ const PHRASES = [
+        private const PHRASES = [
             100 => 'Continue', 101 => 'Switching Protocols', 102 => 'Processing',
             200 => 'OK', 201 => 'Created', 202 => 'Accepted', 203 => 'Non-Authoritative Information', 204 => 'No Content', 205 => 'Reset Content', 206 => 'Partial Content', 207 => 'Multi-status', 208 => 'Already Reported',
             300 => 'Multiple Choices', 301 => 'Moved Permanently', 302 => 'Found', 303 => 'See Other', 304 => 'Not Modified', 305 => 'Use Proxy', 306 => 'Switch Proxy', 307 => 'Temporary Redirect',
@@ -1951,7 +1956,7 @@ namespace Nyholm\Psr7 {
             if (null === $reason && isset(self::PHRASES[$this->statusCode])) {
                 $this->reasonPhrase = self::PHRASES[$status];
             } else {
-                $this->reasonPhrase = $reason;
+                $this->reasonPhrase = $reason ?? '';
             }
 
             $this->protocol = $version;
@@ -2182,7 +2187,7 @@ namespace Nyholm\Psr7 {
         private $size;
 
         /** @var array Hash of readable and writable stream types */
-        /*private*/ const READ_WRITE_HASH = [
+        private const READ_WRITE_HASH = [
             'read' => [
                 'r' => true, 'w+' => true, 'r+' => true, 'x+' => true, 'c+' => true,
                 'rb' => true, 'w+b' => true, 'r+b' => true, 'x+b' => true,
@@ -2226,7 +2231,7 @@ namespace Nyholm\Psr7 {
                 $new = new self();
                 $new->stream = $body;
                 $meta = \stream_get_meta_data($new->stream);
-                $new->seekable = $meta['seekable'];
+                $new->seekable = $meta['seekable'] && 0 === \fseek($new->stream, 0, \SEEK_CUR);
                 $new->readable = isset(self::READ_WRITE_HASH['read'][$meta['mode']]);
                 $new->writable = isset(self::READ_WRITE_HASH['write'][$meta['mode']]);
                 $new->uri = $new->getMetadata('uri');
@@ -2258,7 +2263,7 @@ namespace Nyholm\Psr7 {
             }
         }
 
-        public function close() /*:void*/
+        public function close(): void
         {
             if (isset($this->stream)) {
                 if (\is_resource($this->stream)) {
@@ -2282,7 +2287,7 @@ namespace Nyholm\Psr7 {
             return $result;
         }
 
-        public function getSize() /*:?int*/
+        public function getSize(): ?int
         {
             if (null !== $this->size) {
                 return $this->size;
@@ -2326,7 +2331,7 @@ namespace Nyholm\Psr7 {
             return $this->seekable;
         }
 
-        public function seek($offset, $whence = \SEEK_SET) /*:void*/
+        public function seek($offset, $whence = \SEEK_SET): void
         {
             if (!$this->seekable) {
                 throw new \RuntimeException('Stream is not seekable');
@@ -2337,7 +2342,7 @@ namespace Nyholm\Psr7 {
             }
         }
 
-        public function rewind() /*:void*/
+        public function rewind(): void
         {
             $this->seek(0);
         }
@@ -2420,7 +2425,7 @@ namespace Nyholm\Psr7 {
     final class UploadedFile implements UploadedFileInterface
     {
         /** @var array */
-        /*private*/ const ERRORS = [
+        private const ERRORS = [
             \UPLOAD_ERR_OK => 1,
             \UPLOAD_ERR_INI_SIZE => 1,
             \UPLOAD_ERR_FORM_SIZE => 1,
@@ -2499,7 +2504,7 @@ namespace Nyholm\Psr7 {
         /**
          * @throws \RuntimeException if is moved or not ok
          */
-        private function validateActive() /*:void*/
+        private function validateActive(): void
         {
             if (\UPLOAD_ERR_OK !== $this->error) {
                 throw new \RuntimeException('Cannot retrieve stream due to upload error');
@@ -2523,7 +2528,7 @@ namespace Nyholm\Psr7 {
             return Stream::create($resource);
         }
 
-        public function moveTo($targetPath) /*:void*/
+        public function moveTo($targetPath): void
         {
             $this->validateActive();
 
@@ -2565,12 +2570,12 @@ namespace Nyholm\Psr7 {
             return $this->error;
         }
 
-        public function getClientFilename() /*:?string*/
+        public function getClientFilename(): ?string
         {
             return $this->clientFilename;
         }
 
-        public function getClientMediaType() /*:?string*/
+        public function getClientMediaType(): ?string
         {
             return $this->clientMediaType;
         }
@@ -2593,11 +2598,11 @@ namespace Nyholm\Psr7 {
      */
     final class Uri implements UriInterface
     {
-        /*private*/ const SCHEMES = ['http' => 80, 'https' => 443];
+        private const SCHEMES = ['http' => 80, 'https' => 443];
 
-        /*private*/ const CHAR_UNRESERVED = 'a-zA-Z0-9_\-\.~';
+        private const CHAR_UNRESERVED = 'a-zA-Z0-9_\-\.~';
 
-        /*private*/ const CHAR_SUB_DELIMS = '!\$&\'\(\)\*\+,;=';
+        private const CHAR_SUB_DELIMS = '!\$&\'\(\)\*\+,;=';
 
         /** @var string Uri scheme. */
         private $scheme = '';
@@ -2679,7 +2684,7 @@ namespace Nyholm\Psr7 {
             return $this->host;
         }
 
-        public function getPort() /*:?int*/
+        public function getPort(): ?int
         {
             return $this->port;
         }
@@ -2847,15 +2852,15 @@ namespace Nyholm\Psr7 {
             return !isset(self::SCHEMES[$scheme]) || $port !== self::SCHEMES[$scheme];
         }
 
-        private function filterPort($port) /*:?int*/
+        private function filterPort($port): ?int
         {
             if (null === $port) {
                 return null;
             }
 
             $port = (int) $port;
-            if (1 > $port || 0xffff < $port) {
-                throw new \InvalidArgumentException(\sprintf('Invalid port: %d. Must be between 1 and 65535', $port));
+            if (0 > $port || 0xffff < $port) {
+                throw new \InvalidArgumentException(\sprintf('Invalid port: %d. Must be between 0 and 65535', $port));
             }
 
             return self::isNonStandardPort($this->scheme, $port) ? $port : null;
@@ -5221,46 +5226,60 @@ namespace Tqdev\PhpCrudApi\Database {
     class GenericDB
     {
         private $driver;
+        private $subdriver;
         private $address;
         private $port;
         private $database;
         private $username;
         private $password;
+        private $dsn;
         private $pdo;
         private $reflection;
         private $definition;
         private $conditions;
         private $columns;
         private $converter;
+        private $connectcommands = [];
 
         private function getDsn(): string
         {
-            switch ($this->driver) {
+            if ($this->dsn) {
+                return $this->dsn;
+            }
+
+            switch (($this->driver==='odbc') ? $this->subdriver : $this->driver) {
                 case 'mysql':
                     return "$this->driver:host=$this->address;port=$this->port;dbname=$this->database;charset=utf8mb4";
                 case 'pgsql':
                     return "$this->driver:host=$this->address port=$this->port dbname=$this->database options='--client_encoding=UTF8'";
                 case 'sqlsrv':
                     return "$this->driver:Server=$this->address,$this->port;Database=$this->database";
+                case 'mssql':
+                    return "DRIVER=ODBC Driver 17 for SQL Server:Server=$this->address,$this->port;Database=$this->database";
             }
         }
 
         private function getCommands(): array
         {
-            switch ($this->driver) {
+            $retcommands = $this->connectcommands;
+            switch (($this->driver==='odbc') ? $this->subdriver : $this->driver) {
                 case 'mysql':
-                    return [
+                    $retcommands = array_merge($retcommands, [
                         'SET SESSION sql_warnings=1;',
                         'SET NAMES utf8mb4;',
                         'SET SESSION sql_mode = "ANSI,TRADITIONAL";',
-                    ];
+                    ]);
                 case 'pgsql':
-                    return [
+                    $retcommands = array_merge($retcommands, [
                         "SET NAMES 'UTF8';",
-                    ];
+                    ]);
                 case 'sqlsrv':
-                    return [];
+                case 'mssql':
+                default:
+                    break;
             }
+
+            return $retcommands;
         }
 
         private function getOptions(): array
@@ -5269,7 +5288,7 @@ namespace Tqdev\PhpCrudApi\Database {
                 \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
                 \PDO::ATTR_DEFAULT_FETCH_MODE => \PDO::FETCH_ASSOC,
             );
-            switch ($this->driver) {
+            switch (($this->driver==='odbc') ? $this->subdriver : $this->driver) {
                 case 'mysql':
                     return $options + [
                         \PDO::ATTR_EMULATE_PREPARES => false,
@@ -5286,30 +5305,32 @@ namespace Tqdev\PhpCrudApi\Database {
                         \PDO::SQLSRV_ATTR_DIRECT_QUERY => false,
                         \PDO::SQLSRV_ATTR_FETCHES_NUMERIC_TYPE => true,
                     ];
+                case 'mssql':
+                    return $options;
             }
         }
 
         private function initPdo(): bool
         {
             if ($this->pdo) {
-                $result = $this->pdo->reconstruct($this->getDsn(), $this->username, $this->password, $this->getOptions());
+                $result = $this->pdo->reconstruct($this->getDsn(), $this->username, $this->password, $this->getOptions(), $this->dsn, $this->subdriver);
             } else {
-                $this->pdo = new LazyPdo($this->getDsn(), $this->username, $this->password, $this->getOptions());
+                $this->pdo = new LazyPdo($this->getDsn(), $this->username, $this->password, $this->getOptions(), $this->dsn);
                 $result = true;
             }
             $commands = $this->getCommands();
             foreach ($commands as $command) {
-                $this->pdo->addInitCommand($command);
+                $this->pdo->addConnectCommand($command);
             }
-            $this->reflection = new GenericReflection($this->pdo, $this->driver, $this->database);
-            $this->definition = new GenericDefinition($this->pdo, $this->driver, $this->database);
+            $this->reflection = new GenericReflection($this->pdo, $this->driver, $this->database, $this->subdriver);
+            $this->definition = new GenericDefinition($this->pdo, $this->driver, $this->database, $this->subdriver);
             $this->conditions = new ConditionsBuilder($this->driver);
             $this->columns = new ColumnsBuilder($this->driver);
             $this->converter = new DataConverter($this->driver);
             return $result;
         }
 
-        public function __construct(string $driver, string $address, int $port, string $database, string $username, string $password)
+        public function __construct(string $driver, string $address, int $port, string $database, string $username, string $password, string $dsn, string $subdriver)
         {
             $this->driver = $driver;
             $this->address = $address;
@@ -5317,10 +5338,12 @@ namespace Tqdev\PhpCrudApi\Database {
             $this->database = $database;
             $this->username = $username;
             $this->password = $password;
+            $this->dsn = $dsn;
+            $this->subdriver = ($driver==='odbc') ? $subdriver : '';
             $this->initPdo();
         }
 
-        public function reconstruct(string $driver, string $address, int $port, string $database, string $username, string $password): bool
+        public function reconstruct(string $driver, string $address, int $port, string $database, string $username, string $password, string $dsn, string $subdriver): bool
         {
             if ($driver) {
                 $this->driver = $driver;
@@ -5339,6 +5362,12 @@ namespace Tqdev\PhpCrudApi\Database {
             }
             if ($password) {
                 $this->password = $password;
+            }
+            if ($dsn) {
+                $this->dsn = $dsn;
+            }
+            if ($subdriver) {
+                $this->subdriver = $subdriver;
             }
             return $this->initPdo();
         }
@@ -5522,12 +5551,20 @@ namespace Tqdev\PhpCrudApi\Database {
         {
             return md5(json_encode([
                 $this->driver,
+                $this->subdriver,
                 $this->address,
                 $this->port,
                 $this->database,
-                $this->username
+                $this->username,
+                $this->dsn
             ]));
         }
+
+        public function addConnectCommand(string $command): void
+        {
+            $this->reflection->addConnectCommand($command);
+        }
+
     }
 }
 
@@ -5542,17 +5579,19 @@ namespace Tqdev\PhpCrudApi\Database {
     {
         private $pdo;
         private $driver;
+        private $subdriver;
         private $database;
         private $typeConverter;
         private $reflection;
 
-        public function __construct(LazyPdo $pdo, string $driver, string $database)
+        public function __construct(LazyPdo $pdo, string $driver, string $database, $subdriver)
         {
             $this->pdo = $pdo;
             $this->driver = $driver;
+            $this->subdriver = $subdriver;
             $this->database = $database;
-            $this->typeConverter = new TypeConverter($driver);
-            $this->reflection = new GenericReflection($pdo, $driver, $database);
+            $this->typeConverter = new TypeConverter($driver, $subdriver);
+            $this->reflection = new GenericReflection($pdo, $driver, $database, $subdriver);
         }
 
         private function quote(string $identifier): string
@@ -5965,74 +6004,84 @@ namespace Tqdev\PhpCrudApi\Database {
     {
         private $pdo;
         private $driver;
+        private $subdriver;
         private $database;
         private $typeConverter;
 
-        public function __construct(LazyPdo $pdo, string $driver, string $database)
+        public function __construct(LazyPdo $pdo, string $driver, string $database, string $subdriver)
         {
             $this->pdo = $pdo;
             $this->driver = $driver;
+            $this->subdriver = $subdriver;
             $this->database = $database;
-            $this->typeConverter = new TypeConverter($driver);
+            $this->typeConverter = new TypeConverter($driver, $subdriver);
         }
 
         public function getIgnoredTables(): array
         {
-            switch ($this->driver) {
+            switch (($this->driver==='odbc') ? $this->subdriver : $this->driver) {
                 case 'mysql':
                     return [];
                 case 'pgsql':
                     return ['spatial_ref_sys', 'raster_columns', 'raster_overviews', 'geography_columns', 'geometry_columns'];
                 case 'sqlsrv':
+                case 'mssql':
                     return [];
             }
         }
 
         private function getTablesSQL(): string
         {
-            switch ($this->driver) {
+            switch (($this->driver==='odbc') ? $this->subdriver : $this->driver) {
                 case 'mysql':
                     return 'SELECT "TABLE_NAME", "TABLE_TYPE" FROM "INFORMATION_SCHEMA"."TABLES" WHERE "TABLE_TYPE" IN (\'BASE TABLE\' , \'VIEW\') AND "TABLE_SCHEMA" = ? ORDER BY BINARY "TABLE_NAME"';
                 case 'pgsql':
                     return 'SELECT c.relname as "TABLE_NAME", c.relkind as "TABLE_TYPE" FROM pg_catalog.pg_class c LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace WHERE c.relkind IN (\'r\', \'v\') AND n.nspname <> \'pg_catalog\' AND n.nspname <> \'information_schema\' AND n.nspname !~ \'^pg_toast\' AND pg_catalog.pg_table_is_visible(c.oid) AND \'\' <> ? ORDER BY "TABLE_NAME";';
                 case 'sqlsrv':
+                case 'mssql':
                     return 'SELECT o.name as "TABLE_NAME", o.xtype as "TABLE_TYPE" FROM sysobjects o WHERE o.xtype IN (\'U\', \'V\') ORDER BY "TABLE_NAME"';
             }
         }
 
         private function getTableColumnsSQL(): string
         {
-            switch ($this->driver) {
+            switch (($this->driver==='odbc') ? $this->subdriver : $this->driver) {
                 case 'mysql':
                     return 'SELECT "COLUMN_NAME", "IS_NULLABLE", "DATA_TYPE", "CHARACTER_MAXIMUM_LENGTH" as "CHARACTER_MAXIMUM_LENGTH", "NUMERIC_PRECISION", "NUMERIC_SCALE", "COLUMN_TYPE" FROM "INFORMATION_SCHEMA"."COLUMNS" WHERE "TABLE_NAME" = ? AND "TABLE_SCHEMA" = ?';
                 case 'pgsql':
                     return 'SELECT a.attname AS "COLUMN_NAME", case when a.attnotnull then \'NO\' else \'YES\' end as "IS_NULLABLE", pg_catalog.format_type(a.atttypid, -1) as "DATA_TYPE", case when a.atttypmod < 0 then NULL else a.atttypmod-4 end as "CHARACTER_MAXIMUM_LENGTH", case when a.atttypid != 1700 then NULL else ((a.atttypmod - 4) >> 16) & 65535 end as "NUMERIC_PRECISION", case when a.atttypid != 1700 then NULL else (a.atttypmod - 4) & 65535 end as "NUMERIC_SCALE", \'\' AS "COLUMN_TYPE" FROM pg_attribute a JOIN pg_class pgc ON pgc.oid = a.attrelid WHERE pgc.relname = ? AND \'\' <> ? AND a.attnum > 0 AND NOT a.attisdropped;';
                 case 'sqlsrv':
                     return 'SELECT c.name AS "COLUMN_NAME", c.is_nullable AS "IS_NULLABLE", t.Name AS "DATA_TYPE", (c.max_length/2) AS "CHARACTER_MAXIMUM_LENGTH", c.precision AS "NUMERIC_PRECISION", c.scale AS "NUMERIC_SCALE", \'\' AS "COLUMN_TYPE" FROM sys.columns c INNER JOIN sys.types t ON c.user_type_id = t.user_type_id WHERE c.object_id = OBJECT_ID(?) AND \'\' <> ?';
+                case 'mssql':
+                    return 'SELECT c.name AS "COLUMN_NAME", c.is_nullable AS "IS_NULLABLE", t.Name AS "DATA_TYPE", (c.max_length/2) AS "CHARACTER_MAXIMUM_LENGTH", c.precision AS "NUMERIC_PRECISION", c.scale AS "NUMERIC_SCALE", \'\' AS "COLUMN_TYPE" FROM sys.columns c INNER JOIN sys.types t ON c.user_type_id = t.user_type_id WHERE c.object_id = OBJECT_ID(?)';
             }
         }
 
         private function getTablePrimaryKeysSQL(): string
         {
-            switch ($this->driver) {
+            switch (($this->driver==='odbc') ? $this->subdriver : $this->driver) {
                 case 'mysql':
                     return 'SELECT "COLUMN_NAME" FROM "INFORMATION_SCHEMA"."KEY_COLUMN_USAGE" WHERE "CONSTRAINT_NAME" = \'PRIMARY\' AND "TABLE_NAME" = ? AND "TABLE_SCHEMA" = ?';
                 case 'pgsql':
                     return 'SELECT a.attname AS "COLUMN_NAME" FROM pg_attribute a JOIN pg_constraint c ON (c.conrelid, c.conkey[1]) = (a.attrelid, a.attnum) JOIN pg_class pgc ON pgc.oid = a.attrelid WHERE pgc.relname = ? AND \'\' <> ? AND c.contype = \'p\'';
                 case 'sqlsrv':
                     return 'SELECT c.NAME as "COLUMN_NAME" FROM sys.key_constraints kc inner join sys.objects t on t.object_id = kc.parent_object_id INNER JOIN sys.index_columns ic ON kc.parent_object_id = ic.object_id and kc.unique_index_id = ic.index_id INNER JOIN sys.columns c ON ic.object_id = c.object_id AND ic.column_id = c.column_id WHERE kc.type = \'PK\' and t.object_id = OBJECT_ID(?) and \'\' <> ?';
+                case 'mssql':
+                    return 'SELECT c.NAME as "COLUMN_NAME" FROM sys.key_constraints kc inner join sys.objects t on t.object_id = kc.parent_object_id INNER JOIN sys.index_columns ic ON kc.parent_object_id = ic.object_id and kc.unique_index_id = ic.index_id INNER JOIN sys.columns c ON ic.object_id = c.object_id AND ic.column_id = c.column_id WHERE kc.type = \'PK\' and t.object_id = OBJECT_ID(?)';
             }
         }
 
         private function getTableForeignKeysSQL(): string
         {
-            switch ($this->driver) {
+            switch (($this->driver==='odbc') ? $this->subdriver : $this->driver) {
                 case 'mysql':
                     return 'SELECT "COLUMN_NAME", "REFERENCED_TABLE_NAME" FROM "INFORMATION_SCHEMA"."KEY_COLUMN_USAGE" WHERE "REFERENCED_TABLE_NAME" IS NOT NULL AND "TABLE_NAME" = ? AND "TABLE_SCHEMA" = ?';
                 case 'pgsql':
                     return 'SELECT a.attname AS "COLUMN_NAME", c.confrelid::regclass::text AS "REFERENCED_TABLE_NAME" FROM pg_attribute a JOIN pg_constraint c ON (c.conrelid, c.conkey[1]) = (a.attrelid, a.attnum) JOIN pg_class pgc ON pgc.oid = a.attrelid WHERE pgc.relname = ? AND \'\' <> ? AND c.contype  = \'f\'';
                 case 'sqlsrv':
                     return 'SELECT COL_NAME(fc.parent_object_id, fc.parent_column_id) AS "COLUMN_NAME", OBJECT_NAME (f.referenced_object_id) AS "REFERENCED_TABLE_NAME" FROM sys.foreign_keys AS f INNER JOIN sys.foreign_key_columns AS fc ON f.OBJECT_ID = fc.constraint_object_id WHERE f.parent_object_id = OBJECT_ID(?) and \'\' <> ?';
+                case 'mssql':
+                    return 'SELECT COL_NAME(fc.parent_object_id, fc.parent_column_id) AS "COLUMN_NAME", OBJECT_NAME (f.referenced_object_id) AS "REFERENCED_TABLE_NAME" FROM sys.foreign_keys AS f INNER JOIN sys.foreign_key_columns AS fc ON f.OBJECT_ID = fc.constraint_object_id WHERE f.parent_object_id = OBJECT_ID(?)';
             }
         }
 
@@ -6046,7 +6095,7 @@ namespace Tqdev\PhpCrudApi\Database {
             $sql = $this->getTablesSQL();
             $results = $this->query($sql, [$this->database]);
             foreach ($results as &$result) {
-                switch ($this->driver) {
+                switch (($this->driver==='odbc') ? $this->subdriver : $this->driver) {
                     case 'mysql':
                         $map = ['BASE TABLE' => 'table', 'VIEW' => 'view'];
                         $result['TABLE_TYPE'] = $map[$result['TABLE_TYPE']];
@@ -6056,6 +6105,7 @@ namespace Tqdev\PhpCrudApi\Database {
                         $result['TABLE_TYPE'] = $map[$result['TABLE_TYPE']];
                         break;
                     case 'sqlsrv':
+                    case 'mssql':
                         $map = ['U' => 'table', 'V' => 'view'];
                         $result['TABLE_TYPE'] = $map[trim($result['TABLE_TYPE'])];
                         break;
@@ -6125,6 +6175,12 @@ namespace Tqdev\PhpCrudApi\Database {
             $stmt->execute($parameters);
             return $stmt->fetchAll();
         }
+
+        public function addConnectCommand(string $command): void
+        {
+            $this->pdo->addConnectCommand($command);
+        }
+
     }
 }
 
@@ -6151,7 +6207,7 @@ namespace Tqdev\PhpCrudApi\Database {
             // explicitly NOT calling super::__construct
         }
 
-        public function addInitCommand(string $command)/*: void*/
+        public function addConnectCommand(string $command)/*: void*/
         {
             $this->commands[] = $command;
         }
@@ -6259,10 +6315,12 @@ namespace Tqdev\PhpCrudApi\Database {
     class TypeConverter
     {
         private $driver;
+        private $subdriver;
 
-        public function __construct(string $driver)
+        public function __construct(string $driver, string $subdriver)
         {
             $this->driver = $driver;
+            $this->subdriver = $subdriver;
         }
 
         private $fromJdbc = [
@@ -6277,6 +6335,12 @@ namespace Tqdev\PhpCrudApi\Database {
                 'blob' => 'bytea',
             ],
             'sqlsrv' => [
+                'boolean' => 'bit',
+                'varchar' => 'nvarchar',
+                'clob' => 'ntext',
+                'blob' => 'image',
+            ],
+            'mssql' => [
                 'boolean' => 'bit',
                 'varchar' => 'nvarchar',
                 'clob' => 'ntext',
@@ -6373,6 +6437,25 @@ namespace Tqdev\PhpCrudApi\Database {
                 'uniqueidentifier' => 'char',
                 'xml' => 'clob',
             ],
+            // source: https://docs.microsoft.com/en-us/sql/connect/jdbc/using-basic-data-types?view=sql-server-2017
+            'mssql' => [
+                'varbinary(0)' => 'blob',
+                'bit' => 'boolean',
+                'datetime' => 'timestamp',
+                'datetime2' => 'timestamp',
+                'float' => 'double',
+                'image' => 'blob',
+                'int' => 'integer',
+                'money' => 'decimal',
+                'ntext' => 'clob',
+                'smalldatetime' => 'timestamp',
+                'smallmoney' => 'decimal',
+                'text' => 'clob',
+                'timestamp' => 'binary',
+                'udt' => 'varbinary',
+                'uniqueidentifier' => 'char',
+                'xml' => 'clob',
+            ],
         ];
 
         // source: https://docs.oracle.com/javase/9/docs/api/java/sql/Types.html
@@ -6422,18 +6505,20 @@ namespace Tqdev\PhpCrudApi\Database {
 
         public function toJdbc(string $type, string $size): string
         {
+            $driver = ($this->driver==='odbc') ? $this->subdriver : $this->driver;
+
             $jdbcType = strtolower($type);
-            if (isset($this->toJdbc[$this->driver]["$jdbcType($size)"])) {
-                $jdbcType = $this->toJdbc[$this->driver]["$jdbcType($size)"];
+            if (isset($this->toJdbc[$driver]["$jdbcType($size)"])) {
+                $jdbcType = $this->toJdbc[$driver]["$jdbcType($size)"];
             }
-            if (isset($this->toJdbc[$this->driver][$jdbcType])) {
-                $jdbcType = $this->toJdbc[$this->driver][$jdbcType];
+            if (isset($this->toJdbc[$driver][$jdbcType])) {
+                $jdbcType = $this->toJdbc[$driver][$jdbcType];
             }
             if (isset($this->toJdbc['simplified'][$jdbcType])) {
                 $jdbcType = $this->toJdbc['simplified'][$jdbcType];
             }
             if (!isset($this->valid[$jdbcType])) {
-                throw new \Exception("Unsupported type '$jdbcType' for driver '$this->driver'");
+                throw new \Exception("Unsupported type '$jdbcType' for driver '$driver'");
             }
             return $jdbcType;
         }
@@ -6441,8 +6526,10 @@ namespace Tqdev\PhpCrudApi\Database {
         public function fromJdbc(string $type): string
         {
             $jdbcType = strtolower($type);
-            if (isset($this->fromJdbc[$this->driver][$jdbcType])) {
-                $jdbcType = $this->fromJdbc[$this->driver][$jdbcType];
+            $driver = ($this->driver==='odbc') ? $this->subdriver : $this->driver;
+
+            if (isset($this->fromJdbc[$driver][$jdbcType])) {
+                $jdbcType = $this->fromJdbc[$driver][$jdbcType];
             }
             return $jdbcType;
         }
@@ -7174,6 +7261,53 @@ namespace Tqdev\PhpCrudApi\Middleware {
             }
             return $next->handle($request);
         }
+    }
+}
+
+// file: src/Tqdev/PhpCrudApi/Middleware/ConnectCommandMiddleware.php
+namespace Tqdev\PhpCrudApi\Middleware {
+
+    use Psr\Http\Message\ResponseInterface;
+    use Psr\Http\Message\ServerRequestInterface;
+    use Psr\Http\Server\RequestHandlerInterface;
+    use Tqdev\PhpCrudApi\Column\ReflectionService;
+    use Tqdev\PhpCrudApi\Controller\Responder;
+    use Tqdev\PhpCrudApi\Database\GenericDB;
+    use Tqdev\PhpCrudApi\Middleware\Base\Middleware;
+    use Tqdev\PhpCrudApi\Middleware\Router\Router;
+
+    class ConnectCommandMiddleware extends Middleware
+    {
+
+        private $reflection;
+        private $db;
+        private $commands = [];
+
+        public function __construct(Router $router, Responder $responder, array $properties, ReflectionService $reflection, GenericDB $db)
+        {
+            parent::__construct($router, $responder, $properties);
+            $this->reflection = $reflection;
+            $this->db = $db;
+
+            foreach($this->getCommands() as $command) {
+                $this->db->addConnectCommand($command);
+            }
+        }
+
+        private function getCommands(): array
+        {
+            $dsnHandler = $this->getProperty('handler', '');
+            if ($dsnHandler) {
+                return call_user_func($dsnHandler);
+            }
+            return [];
+        }
+
+        public function process(ServerRequestInterface $request, RequestHandlerInterface $next): ResponseInterface
+        {
+            return $next->handle($request);
+        }
+
     }
 }
 
@@ -7946,6 +8080,24 @@ namespace Tqdev\PhpCrudApi\Middleware {
             return '';
         }
 
+        private function getDsn(): string
+        {
+            $dsnHandler = $this->getProperty('dsnHandler', '');
+            if ($dsnHandler) {
+                return call_user_func($dsnHandler);
+            }
+            return '';
+        }
+
+        private function getOdbcSubdriver(): string
+        {
+            $odbcSubdriverHandler = $this->getProperty('odbcSubdriverHandler', '');
+            if ($odbcSubdriverHandler) {
+                return call_user_func($odbcSubdriverHandler);
+            }
+            return '';
+        }
+
         public function process(ServerRequestInterface $request, RequestHandlerInterface $next): ResponseInterface
         {
             $driver = $this->getDriver();
@@ -7954,8 +8106,10 @@ namespace Tqdev\PhpCrudApi\Middleware {
             $database = $this->getDatabase();
             $username = $this->getUsername();
             $password = $this->getPassword();
-            if ($driver || $address || $port || $database || $username || $password) {
-                $this->db->reconstruct($driver, $address, $port, $database, $username, $password);
+            $dsn = $this->getDsn();
+            $subdriver = $this->getOdbcSubdriver();
+            if ($driver || $address || $port || $database || $username || $password || $dsn || $subdriver) {
+                $this->db->reconstruct($driver, $address, $port, $database, $username, $password, $dsn, $subdriver);
             }
             return $next->handle($request);
         }
@@ -9797,6 +9951,7 @@ namespace Tqdev\PhpCrudApi {
     use Tqdev\PhpCrudApi\Record\ErrorCode;
     use Tqdev\PhpCrudApi\Record\RecordService;
     use Tqdev\PhpCrudApi\ResponseUtils;
+    use Tqdev\PhpCrudApi\Middleware\ConnectCommandMiddleware;
 
     class Api implements RequestHandlerInterface
     {
@@ -9812,7 +9967,9 @@ namespace Tqdev\PhpCrudApi {
                 $config->getPort(),
                 $config->getDatabase(),
                 $config->getUsername(),
-                $config->getPassword()
+                $config->getPassword(),
+                $config->getDSN(),
+                $config->getOdbcSubdriver()
             );
             $prefix = sprintf('phpcrudapi-%s-', substr(md5(__FILE__), 0, 8));
             $cache = CacheFactory::create($config->getCacheType(), $prefix, $config->getCachePath());
@@ -9865,6 +10022,9 @@ namespace Tqdev\PhpCrudApi {
                         break;
                     case 'customization':
                         new CustomizationMiddleware($router, $responder, $properties, $reflection);
+                        break;
+                    case 'connectcommands':
+                        new Middleware\ConnectCommandMiddleware($router, $responder, $properties, $reflection,$db);
                         break;
                 }
             }
@@ -9985,6 +10145,8 @@ namespace Tqdev\PhpCrudApi {
             'debug' => false,
             'basePath' => '',
             'openApiBase' => '{"info":{"title":"PHP-CRUD-API","version":"1.0.0"}}',
+            'dsn' => '',
+            'subdriver' => 'mssql'
         ];
 
         private function getDefaultDriver(array $values): string
@@ -9997,19 +10159,21 @@ namespace Tqdev\PhpCrudApi {
 
         private function getDefaultPort(string $driver): int
         {
-            switch ($driver) {
+            switch (($driver==='odbc') ? $this->getOdbcSubdriver() : $driver) {
                 case 'mysql':return 3306;
                 case 'pgsql':return 5432;
                 case 'sqlsrv':return 1433;
+                case 'mssql':return 1433;
             }
         }
 
         private function getDefaultAddress(string $driver): string
         {
-            switch ($driver) {
+            switch (($driver==='odbc') ? $this->getOdbcSubdriver() : $driver) {
                 case 'mysql':return 'localhost';
                 case 'pgsql':return 'localhost';
                 case 'sqlsrv':return 'localhost';
+                case 'mssql':return 'localhost';
             }
         }
 
@@ -10017,6 +10181,7 @@ namespace Tqdev\PhpCrudApi {
         {
             return [
                 'driver' => $driver,
+                'subdriver' => ($driver==='odbc' ? 'mssql' : ''),
                 'address' => $this->getDefaultAddress($driver),
                 'port' => $this->getDefaultPort($driver),
             ];
@@ -10129,6 +10294,17 @@ namespace Tqdev\PhpCrudApi {
         {
             return json_decode($this->values['openApiBase'], true);
         }
+
+        public function getDSN(): string
+        {
+            return $this->values['dsn'];
+        }
+
+        public function getOdbcSubdriver(): string
+        {
+            return $this->values['subdriver'];
+        }
+
     }
 }
 

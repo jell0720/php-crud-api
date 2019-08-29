@@ -10,17 +10,19 @@ class GenericDefinition
 {
     private $pdo;
     private $driver;
+    private $subdriver;
     private $database;
     private $typeConverter;
     private $reflection;
 
-    public function __construct(LazyPdo $pdo, string $driver, string $database)
+    public function __construct(LazyPdo $pdo, string $driver, string $database, $subdriver)
     {
         $this->pdo = $pdo;
         $this->driver = $driver;
+        $this->subdriver = $subdriver;
         $this->database = $database;
-        $this->typeConverter = new TypeConverter($driver);
-        $this->reflection = new GenericReflection($pdo, $driver, $database);
+        $this->typeConverter = new TypeConverter($driver, $subdriver);
+        $this->reflection = new GenericReflection($pdo, $driver, $database, $subdriver);
     }
 
     private function quote(string $identifier): string

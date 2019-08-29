@@ -5,10 +5,12 @@ namespace Tqdev\PhpCrudApi\Database;
 class TypeConverter
 {
     private $driver;
+    private $subdriver;
 
-    public function __construct(string $driver)
+    public function __construct(string $driver, string $subdriver)
     {
         $this->driver = $driver;
+        $this->subdriver = $subdriver;
     }
 
     private $fromJdbc = [
@@ -23,6 +25,12 @@ class TypeConverter
             'blob' => 'bytea',
         ],
         'sqlsrv' => [
+            'boolean' => 'bit',
+            'varchar' => 'nvarchar',
+            'clob' => 'ntext',
+            'blob' => 'image',
+        ],
+        'mssql' => [
             'boolean' => 'bit',
             'varchar' => 'nvarchar',
             'clob' => 'ntext',
@@ -119,6 +127,25 @@ class TypeConverter
             'uniqueidentifier' => 'char',
             'xml' => 'clob',
         ],
+        // source: https://docs.microsoft.com/en-us/sql/connect/jdbc/using-basic-data-types?view=sql-server-2017
+        'mssql' => [
+            'varbinary(0)' => 'blob',
+            'bit' => 'boolean',
+            'datetime' => 'timestamp',
+            'datetime2' => 'timestamp',
+            'float' => 'double',
+            'image' => 'blob',
+            'int' => 'integer',
+            'money' => 'decimal',
+            'ntext' => 'clob',
+            'smalldatetime' => 'timestamp',
+            'smallmoney' => 'decimal',
+            'text' => 'clob',
+            'timestamp' => 'binary',
+            'udt' => 'varbinary',
+            'uniqueidentifier' => 'char',
+            'xml' => 'clob',
+        ],
     ];
 
     // source: https://docs.oracle.com/javase/9/docs/api/java/sql/Types.html
@@ -168,18 +195,20 @@ class TypeConverter
 
     public function toJdbc(string $type, string $size): string
     {
+        $driver = ($this->driver==='odbc') ? $this->subdriver : $this->driver;
+
         $jdbcType = strtolower($type);
-        if (isset($this->toJdbc[$this->driver]["$jdbcType($size)"])) {
-            $jdbcType = $this->toJdbc[$this->driver]["$jdbcType($size)"];
+        if (isset($this->toJdbc[$driver]["$jdbcType($size)"])) {
+            $jdbcType = $this->toJdbc[$driver]["$jdbcType($size)"];
         }
-        if (isset($this->toJdbc[$this->driver][$jdbcType])) {
-            $jdbcType = $this->toJdbc[$this->driver][$jdbcType];
+        if (isset($this->toJdbc[$driver][$jdbcType])) {
+            $jdbcType = $this->toJdbc[$driver][$jdbcType];
         }
         if (isset($this->toJdbc['simplified'][$jdbcType])) {
             $jdbcType = $this->toJdbc['simplified'][$jdbcType];
         }
         if (!isset($this->valid[$jdbcType])) {
-            throw new \Exception("Unsupported type '$jdbcType' for driver '$this->driver'");
+            throw new \Exception("Unsupported type '$jdbcType' for driver '$driver'");
         }
         return $jdbcType;
     }
@@ -187,8 +216,10 @@ class TypeConverter
     public function fromJdbc(string $type): string
     {
         $jdbcType = strtolower($type);
-        if (isset($this->fromJdbc[$this->driver][$jdbcType])) {
-            $jdbcType = $this->fromJdbc[$this->driver][$jdbcType];
+        $driver = ($this->driver==='odbc') ? $this->subdriver : $this->driver;
+
+        if (isset($this->fromJdbc[$driver][$jdbcType])) {
+            $jdbcType = $this->fromJdbc[$driver][$jdbcType];
         }
         return $jdbcType;
     }

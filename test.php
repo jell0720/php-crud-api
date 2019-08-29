@@ -101,6 +101,14 @@ function getPassword(Config $config)
     return $config->getMiddlewares()['reconnect']['passwordHandler']();
 }
 
+function getDsn(Config $config)
+{
+    if (!isset($config->getMiddlewares()['reconnect']['dsnHandler'])) {
+        return $config->getDSN();
+    }
+    return $config->getMiddlewares()['reconnect']['dsnHandler']();
+}
+
 
 function loadFixture(string $dir, Config $config)
 {
@@ -113,7 +121,9 @@ function loadFixture(string $dir, Config $config)
         $config->getPort(),
         getDatabase($config),
         getUsername($config),
-        getPassword($config)
+        getPassword($config),
+        getDsn($config),
+        $config->getOdbcSubdriver()        
     );
     $pdo = $db->pdo();
     $file = preg_replace('/--.*$/m', '', $file);

@@ -22,7 +22,7 @@ class LazyPdo extends \PDO
         // explicitly NOT calling super::__construct
     }
 
-    public function addInitCommand(string $command)/*: void*/
+    public function addConnectCommand(string $command)/*: void*/
     {
         $this->commands[] = $command;
     }

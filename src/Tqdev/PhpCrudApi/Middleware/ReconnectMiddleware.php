@@ -77,6 +77,25 @@ class ReconnectMiddleware extends Middleware
         return '';
     }
 
+    private function getDsn(): string
+    {
+        $dsnHandler = $this->getProperty('dsnHandler', '');
+        if ($dsnHandler) {
+            return call_user_func($dsnHandler);
+        }
+        return '';
+    }
+
+    private function getOdbcSubdriver(): string
+    {
+        $odbcSubdriverHandler = $this->getProperty('odbcSubdriverHandler', '');
+        if ($odbcSubdriverHandler) {
+            return call_user_func($odbcSubdriverHandler);
+        }
+        return '';
+    }
+
+
     public function process(ServerRequestInterface $request, RequestHandlerInterface $next): ResponseInterface
     {
         $driver = $this->getDriver();
@@ -85,8 +104,10 @@ class ReconnectMiddleware extends Middleware
         $database = $this->getDatabase();
         $username = $this->getUsername();
         $password = $this->getPassword();
-        if ($driver || $address || $port || $database || $username || $password) {
-            $this->db->reconstruct($driver, $address, $port, $database, $username, $password);
+        $dsn = $this->getDsn();
+        $subdriver = $this->getOdbcSubdriver();
+        if ($driver || $address || $port || $database || $username || $password || $dsn || $subdriver) {
+            $this->db->reconstruct($driver, $address, $port, $database, $username, $password, $dsn, $subdriver);
         }
         return $next->handle($request);
     }

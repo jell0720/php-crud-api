@@ -3,8 +3,9 @@ $settings = [
     'database' => 'incorrect_database',
     'username' => 'incorrect_username',
     'password' => 'incorrect_password',
+    'dsn'      => '',
     'controllers' => 'records,columns,cache,openapi,geojson',
-    'middlewares' => 'cors,reconnect,dbAuth,jwtAuth,basicAuth,authorization,validation,ipAddress,sanitation,multiTenancy,pageLimits,joinLimits,customization',
+    'middlewares' => 'cors,reconnect,dbAuth,jwtAuth,basicAuth,authorization,validation,ipAddress,sanitation,multiTenancy,pageLimits,joinLimits,customization,connectcommands',
     'dbAuth.mode' => 'optional',
     'dbAuth.returnedColumns' => 'id,username,password',
     'jwtAuth.mode' => 'optional',
@@ -53,6 +54,9 @@ $settings = [
         if ($tableName == 'kunsthåndværk' && $operation == 'increment') {
             return $response->withHeader('X-Time-Taken', 0.006/*microtime(true)*/ - $environment->start);
         }
+    },
+    'connectcommands.handler' => function () {
+        return [];
     },
     'debug' => false,
 ];
