@@ -4819,6 +4819,11 @@ namespace Tqdev\PhpCrudApi\Database {
         private $driver;
         private $converter;
 
+        private $overrides = [
+            'getOffsetLimitOverride'    => false,
+            'getInsertOverride'         => false,
+        ];
+
         public function __construct(string $driver)
         {
             $this->driver = $driver;
@@ -4834,6 +4839,8 @@ namespace Tqdev\PhpCrudApi\Database {
                 case 'mysql':return " LIMIT $offset, $limit";
                 case 'pgsql':return " LIMIT $limit OFFSET $offset";
                 case 'sqlsrv':return " OFFSET $offset ROWS FETCH NEXT $limit ROWS ONLY";
+                default:
+                    return $this->checkOverride(__FUNCTION__.'Override', [$offset, $limit]);
             }
         }
 
@@ -4886,6 +4893,8 @@ namespace Tqdev\PhpCrudApi\Database {
                 case 'mysql':return "$columnsSql VALUES $valuesSql";
                 case 'pgsql':return "$columnsSql VALUES $valuesSql RETURNING $outputColumn";
                 case 'sqlsrv':return "$columnsSql OUTPUT INSERTED.$outputColumn VALUES $valuesSql";
+                default:
+                    return $this->checkOverride(__FUNCTION__.'Override', [$columnsSql, $outputColumn, $valuesSql]);
             }
         }
 
@@ -4914,6 +4923,19 @@ namespace Tqdev\PhpCrudApi\Database {
                 $results[] = $quotedColumnName . '=' . $quotedColumnName . '+' . $columnValue;
             }
             return implode(',', $results);
+        }
+
+        public function setOverride(string $fnname, callable $override) {
+            if (array_key_exists($fnname, $this->overrides)) {
+                $this->overrides[$fnname] = $override;
+            }
+        }
+
+        public function checkOverride($fnnames, $params)
+        {
+            if ($this->overrides[$fnnames]) {
+                return call_user_func_array($this->overrides[$fnnames], $params);
+            }
         }
     }
 }
@@ -5132,6 +5154,10 @@ namespace Tqdev\PhpCrudApi\Database {
     {
         private $driver;
 
+        private $overrides = [
+            'getRecordValueConversionOverride' => false
+        ];
+
         public function __construct(string $driver)
         {
             $this->driver = $driver;
@@ -5144,6 +5170,8 @@ namespace Tqdev\PhpCrudApi\Database {
                     return $value ? true : false;
                 case 'integer':
                     return (int) $value;
+                case 'binhex2base64':
+                    return hex2bin($value);
             }
             return $value;
         }
@@ -5156,6 +5184,11 @@ namespace Tqdev\PhpCrudApi\Database {
             if ($this->driver == 'sqlsrv' && $column->getType() == 'bigint') {
                 return 'integer';
             }
+
+            if ($retval = $this->checkOverride(__FUNCTION__.'Override', [$column])) {
+                return $retval;
+            }
+
             return 'none';
         }
 
@@ -5212,6 +5245,20 @@ namespace Tqdev\PhpCrudApi\Database {
                 }
             }
         }
+        
+        public function setOverride(string $fnname, callable $override) {
+            if (array_key_exists($fnname, $this->overrides)) {
+                $this->overrides[$fnname] = $override;
+            }
+        }
+
+        public function checkOverride($fnnames, $params)
+        {
+            if ($this->overrides[$fnnames]) {
+                return call_user_func_array($this->overrides[$fnnames], $params);
+            }
+        }
+
     }
 }
 
@@ -5239,6 +5286,7 @@ namespace Tqdev\PhpCrudApi\Database {
         private $columns;
         private $converter;
         private $commandsOverride;
+        private $createSingleReturnOverride;
 
         private function getDsn(): string
         {
@@ -5420,6 +5468,13 @@ namespace Tqdev\PhpCrudApi\Database {
             if ($this->driver == 'sqlsrv' && $table->getPk()->getType() == 'bigint') {
                 return (int) $pkValue;
             }
+
+            if (is_callable($this->createSingleReturnOverride)) {
+                if ($retval = $this->checkCreateSingleReturnOverride([$table, $pkValue])) {
+                    return $retval;
+                }
+            }
+
             return $pkValue;
         }
 
@@ -5556,12 +5611,12 @@ namespace Tqdev\PhpCrudApi\Database {
             ]));
         }
 
-        public function setSQLOverride(string $sqlFunction, $value): void
+        public function setSQLOverride(string $sqlFunction, $value)
         {
             $this->reflection->setSQLOverride($sqlFunction, $value);
         }
 
-        public function setGetCommandsOverride($value): void
+        public function setGetCommandsOverride($value)
         {
             $this->commandsOverride = $value;
         }
@@ -5577,11 +5632,32 @@ namespace Tqdev\PhpCrudApi\Database {
             }
         }
 
-        public function setTypeConverterArrays(string $driver, array $from, array $to ): void
+        public function setCreateSingleReturnOverride(callable $callable) {
+            $this->createSingleReturnOverride = $callable;
+        }
+
+        public function checkCreateSingleReturnOverride($parameter) {
+            if (is_callable($this->createSingleReturnOverride)) {
+                return call_user_func_array($this->createSingleReturnOverride, $parameter);
+            }
+        }
+
+        public function setTypeConverterArrays(string $driver, array $from, array $to )
         {
             $this->definition->setTypeConverterArrays($driver, $from, $to);
             $this->reflection->setTypeConverterArrays($driver, $from, $to);
         }
+
+        public function setColumnsBuilder(string $fnname, $callable)
+        {
+            $this->columns->setOverride($fnname, $callable);
+        }
+
+        public function setDataConverter(string $fnname, $callable)
+        {
+            $this->converter->setOverride($fnname, $callable);
+        }
+
     }
 }
 
@@ -6008,10 +6084,11 @@ namespace Tqdev\PhpCrudApi\Database {
             return $stmt->execute();
         }
 
-        public function setTypeConverterArrays(string $driver, array $from, array $to ): void
+        public function setTypeConverterArrays(string $driver, array $from, array $to)
         {
             $this->typeConverter->setTypeConverterArrays($driver, $from, $to);
         }
+
     }
 }
 
@@ -6220,7 +6297,8 @@ namespace Tqdev\PhpCrudApi\Database {
             return $stmt->fetchAll();
         }
 
-        public function setSQLOverride(string $name, $value): void {
+        public function setSQLOverride(string $name, $value)
+        {
             if (isset($this->sqlOverrides[$name])) {
                 $this->sqlOverrides[$name] = $value;
             }
@@ -6235,7 +6313,7 @@ namespace Tqdev\PhpCrudApi\Database {
             }
         }
 
-        public function setTypeConverterArrays(string $driver, array $from, array $to ): void
+        public function setTypeConverterArrays(string $driver, array $from, array $to)
         {
             $this->typeConverter->setTypeConverterArrays($driver, $from, $to);
         }
@@ -6563,7 +6641,7 @@ namespace Tqdev\PhpCrudApi\Database {
             return $jdbcType;
         }
 
-        public function setTypeConverterArrays(string $driver, array $from, array $to ): void
+        public function setTypeConverterArrays(string $driver, array $from, array $to )
         {
             $this->fromJdbc[$driver] = $from;
             $this->toJdbc[$driver] = $to;
@@ -8105,6 +8183,22 @@ namespace Tqdev\PhpCrudApi\Middleware {
             $toTypeArray   = $this->getProperty('toTypeArray', '');
             if ($fromTypeArray && $toTypeArray) {
                 $this->db->setTypeConverterArrays($driver, $fromTypeArray, $toTypeArray);
+            }
+
+            if ($override = $this->getProperty('createSingleReturnOverride','')) {
+                $this->db->setCreateSingleReturnOverride($override);
+            }
+
+            if ($override = $this->getProperty('getOffsetLimitOverride', '')) {
+                $this->db->setColumnsBuilder('getOffsetLimitOverride', $override);
+            }
+
+            if ($override = $this->getProperty('getInsertOverride', '')) {
+                $this->db->setColumnsBuilder('getInsertOverride', $override);
+            }
+
+            if ($override = $this->getProperty('getRecordValueConversionOverride', '')) {
+                $this->db->setDataConverter('getRecordValueConversionOverride', $override);
             }
 
             return $next->handle($request);

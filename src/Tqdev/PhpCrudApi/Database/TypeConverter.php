@@ -194,7 +194,7 @@ class TypeConverter
         return $jdbcType;
     }
 
-    public function setTypeConverterArrays(string $driver, array $from, array $to ): void
+    public function setTypeConverterArrays(string $driver, array $from, array $to )
     {
         $this->fromJdbc[$driver] = $from;
         $this->toJdbc[$driver] = $to;

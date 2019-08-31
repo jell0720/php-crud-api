@@ -23,6 +23,7 @@ class GenericDB
     private $columns;
     private $converter;
     private $commandsOverride;
+    private $createSingleReturnOverride;
 
     private function getDsn(): string
     {
@@ -204,6 +205,13 @@ class GenericDB
         if ($this->driver == 'sqlsrv' && $table->getPk()->getType() == 'bigint') {
             return (int) $pkValue;
         }
+
+        if (is_callable($this->createSingleReturnOverride)) {
+            if ($retval = $this->checkCreateSingleReturnOverride([$table, $pkValue])) {
+                return $retval;
+            }
+        }
+
         return $pkValue;
     }
 
@@ -340,12 +348,12 @@ class GenericDB
         ]));
     }
 
-    public function setSQLOverride(string $sqlFunction, $value): void
+    public function setSQLOverride(string $sqlFunction, $value)
     {
         $this->reflection->setSQLOverride($sqlFunction, $value);
     }
 
-    public function setGetCommandsOverride($value): void
+    public function setGetCommandsOverride($value)
     {
         $this->commandsOverride = $value;
     }
@@ -361,9 +369,30 @@ class GenericDB
         }
     }
 
-    public function setTypeConverterArrays(string $driver, array $from, array $to ): void
+    public function setCreateSingleReturnOverride(callable $callable) {
+        $this->createSingleReturnOverride = $callable;
+    }
+
+    public function checkCreateSingleReturnOverride($parameter) {
+        if (is_callable($this->createSingleReturnOverride)) {
+            return call_user_func_array($this->createSingleReturnOverride, $parameter);
+        }
+    }
+
+    public function setTypeConverterArrays(string $driver, array $from, array $to )
     {
         $this->definition->setTypeConverterArrays($driver, $from, $to);
         $this->reflection->setTypeConverterArrays($driver, $from, $to);
     }
+
+    public function setColumnsBuilder(string $fnname, $callable)
+    {
+        $this->columns->setOverride($fnname, $callable);
+    }
+
+    public function setDataConverter(string $fnname, $callable)
+    {
+        $this->converter->setOverride($fnname, $callable);
+    }
+
 }

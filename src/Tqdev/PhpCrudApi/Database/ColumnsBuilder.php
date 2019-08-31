@@ -10,6 +10,11 @@ class ColumnsBuilder
     private $driver;
     private $converter;
 
+    private $overrides = [
+        'getOffsetLimitOverride'    => false,
+        'getInsertOverride'         => false,
+    ];
+
     public function __construct(string $driver)
     {
         $this->driver = $driver;
@@ -25,6 +30,8 @@ class ColumnsBuilder
             case 'mysql':return " LIMIT $offset, $limit";
             case 'pgsql':return " LIMIT $limit OFFSET $offset";
             case 'sqlsrv':return " OFFSET $offset ROWS FETCH NEXT $limit ROWS ONLY";
+            default:
+                return $this->checkOverride(__FUNCTION__.'Override', [$offset, $limit]);
         }
     }
 
@@ -77,6 +84,8 @@ class ColumnsBuilder
             case 'mysql':return "$columnsSql VALUES $valuesSql";
             case 'pgsql':return "$columnsSql VALUES $valuesSql RETURNING $outputColumn";
             case 'sqlsrv':return "$columnsSql OUTPUT INSERTED.$outputColumn VALUES $valuesSql";
+            default:
+                return $this->checkOverride(__FUNCTION__.'Override', [$columnsSql, $outputColumn, $valuesSql]);
         }
     }
 
@@ -105,5 +114,18 @@ class ColumnsBuilder
             $results[] = $quotedColumnName . '=' . $quotedColumnName . '+' . $columnValue;
         }
         return implode(',', $results);
+    }
+
+    public function setOverride(string $fnname, callable $override) {
+        if (array_key_exists($fnname, $this->overrides)) {
+            $this->overrides[$fnname] = $override;
+        }
+    }
+
+    public function checkOverride($fnnames, $params)
+    {
+        if ($this->overrides[$fnnames]) {
+            return call_user_func_array($this->overrides[$fnnames], $params);
+        }
     }
 }

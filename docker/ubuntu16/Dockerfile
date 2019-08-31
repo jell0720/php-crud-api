@@ -34,4 +34,8 @@ RUN update-locale LANG=en_US.UTF-8
 
 # install run script
 ADD run.sh /usr/sbin/docker-run
+ADD run2.sh /usr/sbin/docker-run2
+RUN apt-get -y install php-odbc
+#RUN echo extension=pdo_odbc.so  > /etc/php/7.0/mods-available/pdo_odbc.ini
+RUN phpenmod pdo_odbc
 CMD docker-run
