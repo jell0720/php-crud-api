@@ -100,7 +100,7 @@ Provide connection string for PDO access. Some drivers needs to match system ODB
 Example for MSSQL ODBC DSN:
     $config = new Config([
 	...
-	'dsn'	   =>  'odbc:DRIVER=ODBC Driver 17 for SQL Server;Server=localhost,1433;Database=<mydatabasename>;charset=UTF-8;MARS_Connection=yes',
+	'dsn'	   =>  'odbc:Driver={ODBC Driver 17 for SQL Server};Server=localhost,1433;Database=<mydatabasename>;charset=UTF-8;MARS_Connection=yes',
 	...
     ]);
 
@@ -1006,7 +1006,7 @@ The config sequence of ODBC MSSQL should look like the following
     },
     'reconnect.driverHandler' => function() { return 'odbc'; }, // Set driver name
     'reconnect.dsnHandler' => function() {			// Set connection string - May varry
-        return 'odbc:DRIVER=ODBC Driver 17 for SQLServer;Server=localhost,1433;Database=<my_databasename>;charset=UTF-8;MARS_Connection=yes';
+        return 'odbc:DRIVER={ODBC Driver 17 for SQLServer};Server=localhost,1433;Database=<my_databasename>;charset=UTF-8;MARS_Connection=yes';
     },
     'reconnect.getTablesSQLOverride'            => 'SELECT o.name as "TABLE_NAME", o.xtype as "TABLE_TYPE" FROM sysobjects o WHERE o.xtype IN (\'U\', \'V\') ORDER BY "TABLE_NAME"',
     'reconnect.getTableColumnsSQLOverride'      => 'SELECT c.name AS "COLUMN_NAME", c.is_nullable AS "IS_NULLABLE", t.Name AS "DATA_TYPE", (c.max_length/2) AS "CHARACTER_MAXIMUM_LENGTH", c.precision AS "NUMERIC_PRECISION", c.scale AS "NUMERIC_SCALE", \'\' AS "COLUMN_TYPE" FROM sys.columns c INNER JOIN sys.types t ON c.user_type_id = t.user_type_id WHERE c.object_id = OBJECT_ID(?)',
