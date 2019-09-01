@@ -12,7 +12,7 @@ class Config
         'password' => null,
         'database' => null,
         'middlewares' => 'cors',
-        'controllers' => 'records,geojson,openapi',
+        'controllers' => 'records,openapi',
         'cacheType' => 'TempFile',
         'cachePath' => '',
         'cacheTime' => 10,

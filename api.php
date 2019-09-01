@@ -5170,7 +5170,7 @@ namespace Tqdev\PhpCrudApi\Database {
                     return $value ? true : false;
                 case 'integer':
                     return (int) $value;
-                case 'binhex2base64':
+                case 'binhex':
                     return hex2bin($value);
             }
             return $value;
@@ -10223,7 +10223,7 @@ namespace Tqdev\PhpCrudApi {
             'password' => null,
             'database' => null,
             'middlewares' => 'cors',
-            'controllers' => 'records,geojson,openapi',
+            'controllers' => 'records,openapi',
             'cacheType' => 'TempFile',
             'cachePath' => '',
             'cacheTime' => 10,

@@ -25,7 +25,7 @@ class DataConverter
                 return $value ? true : false;
             case 'integer':
                 return (int) $value;
-            case 'binhex2base64':
+            case 'binhex':
                 return hex2bin($value);
         }
         return $value;

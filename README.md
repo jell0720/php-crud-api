@@ -65,14 +65,14 @@ Edit the following lines in the bottom of the file "`api.php`":
 
 These are all the configuration options and their default value between brackets:
 
-- "driver": `mysql`, `pgsql`, `sqlsrv` or `odbc` (`mysql`)
+- "driver": `mysql`, `pgsql`, `sqlsrv` (`mysql`) - fork specific: not required if reconnect.driverHandler specified
 - "address": Hostname of the database server (`localhost`)
 - "port": TCP port of the database server (defaults to driver default)
 - "username": Username of the user connecting to the database (no default)
 - "password": Password of the user connecting to the database (no default)
 - "database": Database the connecting is made to (no default)
 - "middlewares": List of middlewares to load (`cors`)
-- "controllers": List of controllers to load (`records,geojson,openapi`)
+- "controllers": List of controllers to load (`records,openapi`) - fork specific: geojson and columns not supported by fork
 - "openApiBase": OpenAPI info (`{"info":{"title":"PHP-CRUD-API","version":"1.0.0"}}`)
 - "cacheType": `TempFile`, `Redis`, `Memcache`, `Memcached` or `NoCache` (`TempFile`)
 - "cachePath": Path/address of the cache (defaults to system's temp directory)
@@ -654,6 +654,10 @@ You can tune the middleware behavior using middleware specific configuration par
 + "reconnect.getTableForeignKeysSQLOverride":Handler to override or add driver specific SQL command ("") * - fork specific 
 + "reconnect.fromTypeArray": Handler to add driver specific SQL type conversion specification ("") * - fork specific
 + "reconnect.toTypeArray": Handler to add driver specific SQL type conversion specification ("") * - fork specific
++ "reconnect.getOffsetLimitOverride": Handler to override driver specific SQL ("") * - fork specific
++ "reconnect.getInsertOverride": Handler to override driver specific SQL ("") * - fork specific
++ "reconnect.getRecordValueConversionOverride": Handler to override driver specific SQL ("") * - fork specific
++ "reconnect.createSingleReturnOverride": Handler to override driver specific SQL ("") * - fork specific
 - "authorization.tableHandler": Handler to implement table authorization rules ("")
 - "authorization.columnHandler": Handler to implement column authorization rules ("")
 - "authorization.recordHandler": Handler to implement record authorization filter rules ("")
@@ -1020,6 +1024,29 @@ The config sequence of ODBC MSSQL should look like the following
             'udt' => 'varbinary',
             'uniqueidentifier' => 'char',
             'xml' => 'clob'
+    'reconnect.getOffsetLimitOverride' => function($offset, $limit) {
+            return " OFFSET $offset ROWS FETCH NEXT $limit ROWS ONLY";
+    },
+    'reconnect.getInsertOverride' => function($columnsSql, $outputColumn, $valuesSql) {
+            return "$columnsSql OUTPUT INSERTED.$outputColumn VALUES $valuesSql";
+    },
+    'reconnect.getRecordValueConversionOverride' => function(Tqdev\PhpCrudApi\Column\Reflection\ReflectedColumn $column) {
+        $type = $column->getType();
+        if ($column->isBoolean()) {
+            return 'boolean';
+        }
+        if (in_array($type,['bigint','integer'])) {
+            return 'integer';
+        }
+        if ($type=='blob') {
+            return 'binhex';
+        }
+    },
+    'reconnect.createSingleReturnOverride' => function($table, $pkValue) {
+        if (in_array($table->getPk()->getType(),['bigint','integer'])) {
+            return (int) $pkValue;
+        }
+    }
     ],
     ...
 
@@ -1262,3 +1289,20 @@ The above test run (including starting up the databases) takes less than 5 minut
 As you can see the "run.sh" script gives you access to a prompt in a chosen the docker environment.
 In this environment the local files are mounted. This allows for easy debugging on different environments.
 You may type "exit" when you are done.
+
+
+### Test results on fork
+
+odbc: 79 tests ran in 25394 ms, 0 failed
+
+Some of the tests exluded, such as:
+
+  - Spatial tests (001/052, 001/053, 001/076, 001/081, 001/082, 001/083)
+  - Bugous/failed tests (001/062, 001/063, 001/073)
+      - 001/062, 001/063 - these are failing due to umlaut charachters in column
+         name. The return result is failing on the with the column name only.
+      - 003/* - coulmns controller is not supported by fork, partially working.
+
+
+
+       
