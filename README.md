@@ -1,4 +1,15 @@
+# Notes about the fork
+
 This is a fork of mevdschee/php-crud-ap package. Please consider using that. 
+
+This fork is a specific/experimental relase for the purpose of addig generic
+DB handler for drivers not supported by main relase such as MSSQL over ODBC. 
+
+If you planning to implement other drivers based on this package it could be
+a good starting point. 
+
+The fork is mainly using reconnect middleware - please check below for
+[example](https://github.com/jtoberling/php-crud-api#support-for-other-db-drivers-eg-odbc----fork-specific)
 
 # PHP-CRUD-API
 
