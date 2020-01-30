@@ -204,7 +204,8 @@ class GenericReflection
         return $stmt->fetchAll();
     }
 
-    public function setSQLOverride(string $name, $value): void {
+    public function setSQLOverride(string $name, $value)
+    {
         if (isset($this->sqlOverrides[$name])) {
             $this->sqlOverrides[$name] = $value;
         }
@@ -219,7 +220,7 @@ class GenericReflection
         }
     }
 
-    public function setTypeConverterArrays(string $driver, array $from, array $to ): void
+    public function setTypeConverterArrays(string $driver, array $from, array $to)
     {
         $this->typeConverter->setTypeConverterArrays($driver, $from, $to);
     }

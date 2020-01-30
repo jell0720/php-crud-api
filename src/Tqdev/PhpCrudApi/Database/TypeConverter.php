@@ -103,7 +103,7 @@ class TypeConverter
         ],
         // source: https://docs.microsoft.com/en-us/sql/connect/jdbc/using-basic-data-types?view=sql-server-2017
         'sqlsrv' => [
-            'varbinary(0)' => 'blob',
+            'varbinary()' => 'blob',
             'bit' => 'boolean',
             'datetime' => 'timestamp',
             'datetime2' => 'timestamp',
@@ -194,7 +194,7 @@ class TypeConverter
         return $jdbcType;
     }
 
-    public function setTypeConverterArrays(string $driver, array $from, array $to ): void
+    public function setTypeConverterArrays(string $driver, array $from, array $to )
     {
         $this->fromJdbc[$driver] = $from;
         $this->toJdbc[$driver] = $to;

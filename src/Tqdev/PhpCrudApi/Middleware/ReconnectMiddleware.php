@@ -116,6 +116,23 @@ class ReconnectMiddleware extends Middleware
             $this->db->setTypeConverterArrays($driver, $fromTypeArray, $toTypeArray);
         }
 
+        if ($override = $this->getProperty('createSingleReturnOverride','')) {
+            $this->db->setCreateSingleReturnOverride($override);
+        }
+
+        if ($override = $this->getProperty('getOffsetLimitOverride', '')) {
+            $this->db->setColumnsBuilder('getOffsetLimitOverride', $override);
+        }
+
+        if ($override = $this->getProperty('getInsertOverride', '')) {
+            $this->db->setColumnsBuilder('getInsertOverride', $override);
+        }
+
+        if ($override = $this->getProperty('getRecordValueConversionOverride', '')) {
+            $this->db->setDataConverter('getRecordValueConversionOverride', $override);
+        }
+
+
         return $next->handle($request);
     }
 }

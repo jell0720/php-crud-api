@@ -1685,7 +1685,7 @@ namespace Nyholm\Psr7 {
             return $new;
         }
 
-        private function setHeaders(array $headers): void
+        private function setHeaders(array $headers) /*:void*/
         {
             foreach ($headers as $header => $value) {
                 $value = $this->validateAndTrimHeader($header, $value);
@@ -1885,7 +1885,7 @@ namespace Nyholm\Psr7 {
             return $new;
         }
 
-        private function updateHostFromUri(): void
+        private function updateHostFromUri() /*:void*/
         {
             if ('' === $host = $this->uri->getHost()) {
                 return;
@@ -1923,7 +1923,7 @@ namespace Nyholm\Psr7 {
         use MessageTrait;
 
         /** @var array Map of standard HTTP status code/reason phrases */
-        private const PHRASES = [
+        /*private*/ const PHRASES = [
             100 => 'Continue', 101 => 'Switching Protocols', 102 => 'Processing',
             200 => 'OK', 201 => 'Created', 202 => 'Accepted', 203 => 'Non-Authoritative Information', 204 => 'No Content', 205 => 'Reset Content', 206 => 'Partial Content', 207 => 'Multi-status', 208 => 'Already Reported',
             300 => 'Multiple Choices', 301 => 'Moved Permanently', 302 => 'Found', 303 => 'See Other', 304 => 'Not Modified', 305 => 'Use Proxy', 306 => 'Switch Proxy', 307 => 'Temporary Redirect',
@@ -2187,7 +2187,7 @@ namespace Nyholm\Psr7 {
         private $size;
 
         /** @var array Hash of readable and writable stream types */
-        private const READ_WRITE_HASH = [
+        /*private*/ const READ_WRITE_HASH = [
             'read' => [
                 'r' => true, 'w+' => true, 'r+' => true, 'x+' => true, 'c+' => true,
                 'rb' => true, 'w+b' => true, 'r+b' => true, 'x+b' => true,
@@ -2263,7 +2263,7 @@ namespace Nyholm\Psr7 {
             }
         }
 
-        public function close(): void
+        public function close() /*:void*/
         {
             if (isset($this->stream)) {
                 if (\is_resource($this->stream)) {
@@ -2287,7 +2287,7 @@ namespace Nyholm\Psr7 {
             return $result;
         }
 
-        public function getSize(): ?int
+        public function getSize() /*:?int*/
         {
             if (null !== $this->size) {
                 return $this->size;
@@ -2331,7 +2331,7 @@ namespace Nyholm\Psr7 {
             return $this->seekable;
         }
 
-        public function seek($offset, $whence = \SEEK_SET): void
+        public function seek($offset, $whence = \SEEK_SET) /*:void*/
         {
             if (!$this->seekable) {
                 throw new \RuntimeException('Stream is not seekable');
@@ -2342,7 +2342,7 @@ namespace Nyholm\Psr7 {
             }
         }
 
-        public function rewind(): void
+        public function rewind() /*:void*/
         {
             $this->seek(0);
         }
@@ -2425,7 +2425,7 @@ namespace Nyholm\Psr7 {
     final class UploadedFile implements UploadedFileInterface
     {
         /** @var array */
-        private const ERRORS = [
+        /*private*/ const ERRORS = [
             \UPLOAD_ERR_OK => 1,
             \UPLOAD_ERR_INI_SIZE => 1,
             \UPLOAD_ERR_FORM_SIZE => 1,
@@ -2504,7 +2504,7 @@ namespace Nyholm\Psr7 {
         /**
          * @throws \RuntimeException if is moved or not ok
          */
-        private function validateActive(): void
+        private function validateActive() /*:void*/
         {
             if (\UPLOAD_ERR_OK !== $this->error) {
                 throw new \RuntimeException('Cannot retrieve stream due to upload error');
@@ -2528,7 +2528,7 @@ namespace Nyholm\Psr7 {
             return Stream::create($resource);
         }
 
-        public function moveTo($targetPath): void
+        public function moveTo($targetPath) /*:void*/
         {
             $this->validateActive();
 
@@ -2570,12 +2570,12 @@ namespace Nyholm\Psr7 {
             return $this->error;
         }
 
-        public function getClientFilename(): ?string
+        public function getClientFilename() /*:?string*/
         {
             return $this->clientFilename;
         }
 
-        public function getClientMediaType(): ?string
+        public function getClientMediaType() /*:?string*/
         {
             return $this->clientMediaType;
         }
@@ -4819,6 +4819,11 @@ namespace Tqdev\PhpCrudApi\Database {
         private $driver;
         private $converter;
 
+        private $overrides = [
+            'getOffsetLimitOverride'    => false,
+            'getInsertOverride'         => false,
+        ];
+
         public function __construct(string $driver)
         {
             $this->driver = $driver;
@@ -4834,6 +4839,8 @@ namespace Tqdev\PhpCrudApi\Database {
                 case 'mysql':return " LIMIT $offset, $limit";
                 case 'pgsql':return " LIMIT $limit OFFSET $offset";
                 case 'sqlsrv':return " OFFSET $offset ROWS FETCH NEXT $limit ROWS ONLY";
+                default:
+                    return $this->checkOverride(__FUNCTION__.'Override', [$offset, $limit]);
             }
         }
 
@@ -4886,6 +4893,8 @@ namespace Tqdev\PhpCrudApi\Database {
                 case 'mysql':return "$columnsSql VALUES $valuesSql";
                 case 'pgsql':return "$columnsSql VALUES $valuesSql RETURNING $outputColumn";
                 case 'sqlsrv':return "$columnsSql OUTPUT INSERTED.$outputColumn VALUES $valuesSql";
+                default:
+                    return $this->checkOverride(__FUNCTION__.'Override', [$columnsSql, $outputColumn, $valuesSql]);
             }
         }
 
@@ -4914,6 +4923,19 @@ namespace Tqdev\PhpCrudApi\Database {
                 $results[] = $quotedColumnName . '=' . $quotedColumnName . '+' . $columnValue;
             }
             return implode(',', $results);
+        }
+
+        public function setOverride(string $fnname, callable $override) {
+            if (array_key_exists($fnname, $this->overrides)) {
+                $this->overrides[$fnname] = $override;
+            }
+        }
+
+        public function checkOverride($fnnames, $params)
+        {
+            if ($this->overrides[$fnnames]) {
+                return call_user_func_array($this->overrides[$fnnames], $params);
+            }
         }
     }
 }
@@ -5132,6 +5154,10 @@ namespace Tqdev\PhpCrudApi\Database {
     {
         private $driver;
 
+        private $overrides = [
+            'getRecordValueConversionOverride' => false
+        ];
+
         public function __construct(string $driver)
         {
             $this->driver = $driver;
@@ -5144,6 +5170,8 @@ namespace Tqdev\PhpCrudApi\Database {
                     return $value ? true : false;
                 case 'integer':
                     return (int) $value;
+                case 'binhex':
+                    return hex2bin($value);
             }
             return $value;
         }
@@ -5156,6 +5184,11 @@ namespace Tqdev\PhpCrudApi\Database {
             if ($this->driver == 'sqlsrv' && $column->getType() == 'bigint') {
                 return 'integer';
             }
+
+            if ($retval = $this->checkOverride(__FUNCTION__.'Override', [$column])) {
+                return $retval;
+            }
+
             return 'none';
         }
 
@@ -5212,6 +5245,20 @@ namespace Tqdev\PhpCrudApi\Database {
                 }
             }
         }
+        
+        public function setOverride(string $fnname, callable $override) {
+            if (array_key_exists($fnname, $this->overrides)) {
+                $this->overrides[$fnname] = $override;
+            }
+        }
+
+        public function checkOverride($fnnames, $params)
+        {
+            if ($this->overrides[$fnnames]) {
+                return call_user_func_array($this->overrides[$fnnames], $params);
+            }
+        }
+
     }
 }
 
@@ -5239,6 +5286,7 @@ namespace Tqdev\PhpCrudApi\Database {
         private $columns;
         private $converter;
         private $commandsOverride;
+        private $createSingleReturnOverride;
 
         private function getDsn(): string
         {
@@ -5306,7 +5354,7 @@ namespace Tqdev\PhpCrudApi\Database {
                         \PDO::SQLSRV_ATTR_FETCHES_NUMERIC_TYPE => true,
                     ];
                 default:
-                    return [];
+                    return $options;
             }
         }
 
@@ -5420,6 +5468,13 @@ namespace Tqdev\PhpCrudApi\Database {
             if ($this->driver == 'sqlsrv' && $table->getPk()->getType() == 'bigint') {
                 return (int) $pkValue;
             }
+
+            if (is_callable($this->createSingleReturnOverride)) {
+                if ($retval = $this->checkCreateSingleReturnOverride([$table, $pkValue])) {
+                    return $retval;
+                }
+            }
+
             return $pkValue;
         }
 
@@ -5556,12 +5611,12 @@ namespace Tqdev\PhpCrudApi\Database {
             ]));
         }
 
-        public function setSQLOverride(string $sqlFunction, $value): void
+        public function setSQLOverride(string $sqlFunction, $value)
         {
             $this->reflection->setSQLOverride($sqlFunction, $value);
         }
 
-        public function setGetCommandsOverride($value): void
+        public function setGetCommandsOverride($value)
         {
             $this->commandsOverride = $value;
         }
@@ -5577,11 +5632,32 @@ namespace Tqdev\PhpCrudApi\Database {
             }
         }
 
-        public function setTypeConverterArrays(string $driver, array $from, array $to ): void
+        public function setCreateSingleReturnOverride(callable $callable) {
+            $this->createSingleReturnOverride = $callable;
+        }
+
+        public function checkCreateSingleReturnOverride($parameter) {
+            if (is_callable($this->createSingleReturnOverride)) {
+                return call_user_func_array($this->createSingleReturnOverride, $parameter);
+            }
+        }
+
+        public function setTypeConverterArrays(string $driver, array $from, array $to )
         {
             $this->definition->setTypeConverterArrays($driver, $from, $to);
             $this->reflection->setTypeConverterArrays($driver, $from, $to);
         }
+
+        public function setColumnsBuilder(string $fnname, $callable)
+        {
+            $this->columns->setOverride($fnname, $callable);
+        }
+
+        public function setDataConverter(string $fnname, $callable)
+        {
+            $this->converter->setOverride($fnname, $callable);
+        }
+
     }
 }
 
@@ -6008,10 +6084,11 @@ namespace Tqdev\PhpCrudApi\Database {
             return $stmt->execute();
         }
 
-        public function setTypeConverterArrays(string $driver, array $from, array $to ): void
+        public function setTypeConverterArrays(string $driver, array $from, array $to)
         {
             $this->typeConverter->setTypeConverterArrays($driver, $from, $to);
         }
+
     }
 }
 
@@ -6220,7 +6297,8 @@ namespace Tqdev\PhpCrudApi\Database {
             return $stmt->fetchAll();
         }
 
-        public function setSQLOverride(string $name, $value): void {
+        public function setSQLOverride(string $name, $value)
+        {
             if (isset($this->sqlOverrides[$name])) {
                 $this->sqlOverrides[$name] = $value;
             }
@@ -6235,7 +6313,7 @@ namespace Tqdev\PhpCrudApi\Database {
             }
         }
 
-        public function setTypeConverterArrays(string $driver, array $from, array $to ): void
+        public function setTypeConverterArrays(string $driver, array $from, array $to)
         {
             $this->typeConverter->setTypeConverterArrays($driver, $from, $to);
         }
@@ -6472,7 +6550,7 @@ namespace Tqdev\PhpCrudApi\Database {
             ],
             // source: https://docs.microsoft.com/en-us/sql/connect/jdbc/using-basic-data-types?view=sql-server-2017
             'sqlsrv' => [
-                'varbinary(0)' => 'blob',
+                'varbinary()' => 'blob',
                 'bit' => 'boolean',
                 'datetime' => 'timestamp',
                 'datetime2' => 'timestamp',
@@ -6563,7 +6641,7 @@ namespace Tqdev\PhpCrudApi\Database {
             return $jdbcType;
         }
 
-        public function setTypeConverterArrays(string $driver, array $from, array $to ): void
+        public function setTypeConverterArrays(string $driver, array $from, array $to )
         {
             $this->fromJdbc[$driver] = $from;
             $this->toJdbc[$driver] = $to;
@@ -8107,6 +8185,22 @@ namespace Tqdev\PhpCrudApi\Middleware {
                 $this->db->setTypeConverterArrays($driver, $fromTypeArray, $toTypeArray);
             }
 
+            if ($override = $this->getProperty('createSingleReturnOverride','')) {
+                $this->db->setCreateSingleReturnOverride($override);
+            }
+
+            if ($override = $this->getProperty('getOffsetLimitOverride', '')) {
+                $this->db->setColumnsBuilder('getOffsetLimitOverride', $override);
+            }
+
+            if ($override = $this->getProperty('getInsertOverride', '')) {
+                $this->db->setColumnsBuilder('getInsertOverride', $override);
+            }
+
+            if ($override = $this->getProperty('getRecordValueConversionOverride', '')) {
+                $this->db->setDataConverter('getRecordValueConversionOverride', $override);
+            }
+
             return $next->handle($request);
         }
     }
@@ -8312,7 +8406,7 @@ namespace Tqdev\PhpCrudApi\OpenApi {
         {
             $this->openapi = new OpenApiDefinition($base);
             $this->records = new OpenApiRecordsBuilder($this->openapi, $reflection);
-            $this->columns = new OpenApiColumnsBuilder($this->openapi, $reflection);
+            $this->columns = new OpenApiColumnsBuilder($this->openapi);
         }
 
         private function getServerUrl(): string
@@ -8332,6 +8426,7 @@ namespace Tqdev\PhpCrudApi\OpenApi {
                 $this->openapi->set("servers|0|url", $this->getServerUrl());
             }
             $this->records->build();
+            //$this->columns->build();
             return $this->openapi;
         }
     }
@@ -8347,16 +8442,174 @@ namespace Tqdev\PhpCrudApi\OpenApi {
     class OpenApiColumnsBuilder
     {
         private $openapi;
-        private $reflection;
+        private $operations = [
+            'database' => [
+                'read' => 'get',
+            ],
+            'table' => [
+                'create' => 'post',
+                'read' => 'get',
+                'update' => 'put', //rename
+                'delete' => 'delete',
+            ],
+            'column' => [
+                'create' => 'post',
+                'read' => 'get',
+                'update' => 'put',
+                'delete' => 'delete',
+            ]
+        ];
 
-        public function __construct(OpenApiDefinition $openapi, ReflectionService $reflection)
+        public function __construct(OpenApiDefinition $openapi)
         {
             $this->openapi = $openapi;
-            $this->reflection = $reflection;
         }
 
         public function build() /*: void*/
         {
+            $this->setPaths();
+            $this->openapi->set("components|responses|boolSuccess|description", "boolean indicating success or failure");
+            $this->openapi->set("components|responses|boolSuccess|content|application/json|schema|type", "boolean");
+            $this->setComponentSchema();
+            $this->setComponentResponse();
+            $this->setComponentRequestBody();
+            $this->setComponentParameters();
+            foreach (array_keys($this->operations) as $index => $type) {
+                $this->setTag($index, $type);
+            }
+        }
+
+        private function setPaths() /*: void*/
+        {
+            foreach (array_keys($this->operations) as $type) {
+                foreach ($this->operations[$type] as $operation => $method) {
+                    $parameters = [];
+                    switch ($type) {
+                        case 'database':
+                            $path = '/columns';
+                            break;
+                        case 'table':
+                            $path = $operation == 'create' ? '/columns' : '/columns/{table}';
+                            break;
+                        case 'column':
+                            $path = $operation == 'create' ? '/columns/{table}' : '/columns/{table}/{column}';
+                            break;
+                    }
+                    if (strpos($path, '{table}')) {
+                        $parameters[] = 'table';
+                    }
+                    if (strpos($path, '{column}')) {
+                        $parameters[] = 'column';
+                    }
+                    foreach ($parameters as $p => $parameter) {
+                        $this->openapi->set("paths|$path|$method|parameters|$p|\$ref", "#/components/parameters/$parameter");
+                    }
+                    $operationType = $operation . ucfirst($type);
+                    if (in_array($operation, ['create', 'update'])) {
+                        $this->openapi->set("paths|$path|$method|requestBody|\$ref", "#/components/requestBodies/$operationType");
+                    }
+                    $this->openapi->set("paths|$path|$method|tags|0", "$type");
+                    $this->openapi->set("paths|$path|$method|description", "$operation $type");
+                    switch ($operation) {
+                        case 'read':
+                            $this->openapi->set("paths|$path|$method|responses|200|\$ref", "#/components/responses/$operationType");
+                            break;
+                        case 'create':
+                        case 'update':
+                        case 'delete':
+                            $this->openapi->set("paths|$path|$method|responses|200|\$ref", "#/components/responses/boolSuccess");
+                            break;
+                    }
+                }
+            }
+        }
+
+        private function setComponentSchema() /*: void*/
+        {
+            foreach (array_keys($this->operations) as $type) {
+                foreach (array_keys($this->operations[$type]) as $operation) {
+                    if ($operation == 'delete') {
+                        continue;
+                    }
+                    $operationType = $operation . ucfirst($type);
+                    $prefix = "components|schemas|$operationType";
+                    $this->openapi->set("$prefix|type", "object");
+                    switch ($type) {
+                        case 'database':
+                            $this->openapi->set("$prefix|properties|tables|type", 'array');
+                            $this->openapi->set("$prefix|properties|tables|items|\$ref", "#/components/responses/readTable");
+                            break;
+                        case 'table':
+                            $this->openapi->set("$prefix|properties|name|type", 'string');
+                            $this->openapi->set("$prefix|properties|type|type", 'string');
+                            $this->openapi->set("$prefix|properties|columns|type", 'array');
+                            $this->openapi->set("$prefix|properties|columns|items|\$ref", "#/components/responses/readColumn");
+                            break;
+                        case 'column':
+                            $this->openapi->set("$prefix|properties|name|type", 'string');
+                            $this->openapi->set("$prefix|properties|type|type", 'string');
+                            $this->openapi->set("$prefix|properties|length|type", 'integer');
+                            $this->openapi->set("$prefix|properties|length|format", "int64");
+                            $this->openapi->set("$prefix|properties|precision|type", 'integer');
+                            $this->openapi->set("$prefix|properties|precision|format", "int64");
+                            $this->openapi->set("$prefix|properties|scale|type", 'integer');
+                            $this->openapi->set("$prefix|properties|scale|format", "int64");
+                            $this->openapi->set("$prefix|properties|nullable|type", 'boolean');
+                            $this->openapi->set("$prefix|properties|pk|type", 'boolean');
+                            $this->openapi->set("$prefix|properties|fk|type", 'string');
+                            break;
+                    }
+                }
+            }
+        }
+
+        private function setComponentResponse() /*: void*/
+        {
+            foreach (array_keys($this->operations) as $type) {
+                foreach (array_keys($this->operations[$type]) as $operation) {
+                    if ($operation != 'read') {
+                        continue;
+                    }
+                    $operationType = $operation . ucfirst($type);
+                    $this->openapi->set("components|responses|$operationType|description", "single $type record");
+                    $this->openapi->set("components|responses|$operationType|content|application/json|schema|\$ref", "#/components/schemas/$operationType");
+                }
+            }
+        }
+
+        private function setComponentRequestBody() /*: void*/
+        {
+            foreach (array_keys($this->operations) as $type) {
+                foreach (array_keys($this->operations[$type]) as $operation) {
+                    if (!in_array($operation, ['create', 'update'])) {
+                        continue;
+                    }
+                    $operationType = $operation . ucfirst($type);
+                    $this->openapi->set("components|requestBodies|$operationType|description", "single $type record");
+                    $this->openapi->set("components|requestBodies|$operationType|content|application/json|schema|\$ref", "#/components/schemas/$operationType");
+                }
+            }
+        }
+
+        private function setComponentParameters() /*: void*/
+        {
+            $this->openapi->set("components|parameters|table|name", "table");
+            $this->openapi->set("components|parameters|table|in", "path");
+            $this->openapi->set("components|parameters|table|schema|type", "string");
+            $this->openapi->set("components|parameters|table|description", "table name");
+            $this->openapi->set("components|parameters|table|required", true);
+
+            $this->openapi->set("components|parameters|column|name", "column");
+            $this->openapi->set("components|parameters|column|in", "path");
+            $this->openapi->set("components|parameters|column|schema|type", "string");
+            $this->openapi->set("components|parameters|column|description", "column name");
+            $this->openapi->set("components|parameters|column|required", true);
+        }
+
+        private function setTag(int $index, string $type) /*: void*/
+        {
+            $this->openapi->set("tags|$index|name", "$type");
+            $this->openapi->set("tags|$index|description", "$type operations");
         }
     }
 }
@@ -10129,7 +10382,7 @@ namespace Tqdev\PhpCrudApi {
             'password' => null,
             'database' => null,
             'middlewares' => 'cors',
-            'controllers' => 'records,geojson,openapi',
+            'controllers' => 'records,openapi',
             'cacheType' => 'TempFile',
             'cachePath' => '',
             'cacheTime' => 10,

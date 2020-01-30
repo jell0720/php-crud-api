@@ -15,7 +15,7 @@ class OpenApiBuilder
     {
         $this->openapi = new OpenApiDefinition($base);
         $this->records = new OpenApiRecordsBuilder($this->openapi, $reflection);
-        $this->columns = new OpenApiColumnsBuilder($this->openapi, $reflection);
+        $this->columns = new OpenApiColumnsBuilder($this->openapi);
     }
 
     private function getServerUrl(): string
@@ -35,6 +35,7 @@ class OpenApiBuilder
             $this->openapi->set("servers|0|url", $this->getServerUrl());
         }
         $this->records->build();
+        //$this->columns->build();
         return $this->openapi;
     }
 }

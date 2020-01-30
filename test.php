@@ -173,4 +173,5 @@ function run(array $drivers, string $dir, array $matches)
     }
 }
 
-run(['mysql', 'pgsql', 'sqlsrv'], __DIR__ . '/tests', array_slice($argv, 1));
+#run(['mysql', 'pgsql', 'sqlsrv'], __DIR__ . '/tests', array_slice($argv, 1));
+run(['sqlsrv'], __DIR__ . '/tests', array_slice($argv, 1));

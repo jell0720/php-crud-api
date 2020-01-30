@@ -9,6 +9,10 @@ class DataConverter
 {
     private $driver;
 
+    private $overrides = [
+        'getRecordValueConversionOverride' => false
+    ];
+
     public function __construct(string $driver)
     {
         $this->driver = $driver;
@@ -21,6 +25,8 @@ class DataConverter
                 return $value ? true : false;
             case 'integer':
                 return (int) $value;
+            case 'binhex':
+                return hex2bin($value);
         }
         return $value;
     }
@@ -33,6 +39,11 @@ class DataConverter
         if ($this->driver == 'sqlsrv' && $column->getType() == 'bigint') {
             return 'integer';
         }
+
+        if ($retval = $this->checkOverride(__FUNCTION__.'Override', [$column])) {
+            return $retval;
+        }
+
         return 'none';
     }
 
@@ -89,4 +100,18 @@ class DataConverter
             }
         }
     }
+    
+    public function setOverride(string $fnname, callable $override) {
+        if (array_key_exists($fnname, $this->overrides)) {
+            $this->overrides[$fnname] = $override;
+        }
+    }
+
+    public function checkOverride($fnnames, $params)
+    {
+        if ($this->overrides[$fnnames]) {
+            return call_user_func_array($this->overrides[$fnnames], $params);
+        }
+    }
+
 }
