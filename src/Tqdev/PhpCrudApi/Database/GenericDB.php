@@ -77,12 +77,12 @@ class GenericDB
                 return $options + [
                     \PDO::ATTR_EMULATE_PREPARES => false,
                     \PDO::MYSQL_ATTR_FOUND_ROWS => true,
-                    \PDO::ATTR_PERSISTENT => true,
+//                    \PDO::ATTR_PERSISTENT => true,		// jtoberling 2020-01-30
                 ];
             case 'pgsql':
                 return $options + [
                     \PDO::ATTR_EMULATE_PREPARES => false,
-                    \PDO::ATTR_PERSISTENT => true,
+//                    \PDO::ATTR_PERSISTENT => true,		// jtoberling 2020-01-30
                 ];
             case 'sqlsrv':
                 return $options + [
